@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Katana Fruit — Corta la fruta</title>
+<style>
+  :root{
+    --magenta:#ff4fd8; --malva:#b86cff; --cian:#27e9ff; --azul:#2a56ff;
+    --ink:#0e1320; --paper:#ffffff;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;color:var(--ink)}
+  body{
+    background: linear-gradient(135deg,var(--magenta),var(--malva),var(--cian),var(--azul));
+    background-size: 400% 400%;
+    animation: sky 18s ease infinite;
+  }
+  @keyframes sky{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+  .app{height:100dvh;display:flex;align-items:center;justify-content:center;padding:10px}
+  .frame{
+    width:min(1100px,100%); height:calc(100dvh - 24px);
+    background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,.7));
+    border-radius:18px; position:relative; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.25); backdrop-filter: blur(6px);
+  }
+  .hud{position:absolute;left:10px;top:8px;display:flex;gap:8px;align-items:center;z-index:5;flex-wrap:wrap}
+  .chip{background:#fff;border-radius:14px;padding:6px 10px;font-weight:800;box-shadow:0 10px 24px rgba(0,0,0,.16)}
+  .btn{border:none;border-radius:12px;padding:8px 12px;font-weight:800;cursor:pointer;box-shadow:0 10px 24px rgba(0,0,0,.16)}
+  .btn.primary{color:#fff;background:linear-gradient(90deg,var(--cian),var(--azul))}
+  .btn.ghost{background:#fff}
+  .right{position:absolute;right:10px;top:8px;display:flex;gap:8px;z-index:5;flex-wrap:wrap}
+  canvas{position:absolute;inset:0;display:block}
+  .overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.86),rgba(255,255,255,.62));
+    display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;z-index:6}
+  .title{font-size:clamp(20px,4vw,32px);font-weight:900;margin:0;text-align:center}
+  .subtitle{margin:0 16px;text-align:center;color:#3b3f55}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .kbd{background:#fff;border-radius:10px;padding:6px 10px;box-shadow:0 10px 24px rgba(0,0,0,.16);font-weight:700}
+  .hidden{display:none}
+  .modal{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.4);z-index:7}
+  .modal[open]{display:flex}
+  .card{background:#fff;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:16px 18px;max-width:380px;width:92%; text-align:center}
+  .card h2{margin:0 0 8px;font-size:22px}
+  .card p{margin:0 0 14px;color:#4a4f5c}
+  .actions{display:flex;gap:8px;justify-content:center}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="frame" id="frame">
+    <div class="hud">
+      <div class="chip">⚔️ Nivel: <span id="level">1</span></div>
+      <div class="chip">🍉 Puntos: <span id="score">0</span></div>
+      <div class="chip">❤️ Vidas: <span id="lives">3</span></div>
+    </div>
+    <div class="right">
+      <button class="btn ghost" id="btnBack">← Pueblo</button>
+      <button class="btn primary" id="btnPause">Pausa</button>
+    </div>
+
+    <canvas id="game" aria-label="Katana Fruit"></canvas>
+
+    <div class="overlay" id="start">
+      <h1 class="title">Katana Fruit</h1>
+      <p class="subtitle">Desliza para cortar fruta. La katana sigue tu trazo. Evita las bombas.</p>
+      <div class="controls">
+        <div class="kbd">Desliza rápido = combo</div>
+        <div class="kbd">3 fallos → fin</div>
+      </div>
+      <button class="btn primary" id="btnStart">Empezar</button>
+    </div>
+
+    <div class="modal" id="gameover">
+      <div class="card">
+        <h2>¡Fin de partida!</h2>
+        <p>Nivel: <b id="finalLevel">1</b> · Puntos: <b id="finalScore">0</b></p>
+        <div class="actions">
+          <button class="btn ghost" id="btnAgain">Reintentar</button>
+          <button class="btn primary" id="btnGoBack">Volver al pueblo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const frame = document.getElementById('frame');
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+function fitCanvas(){
+  const r = frame.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.style.width = r.width+'px';
+  canvas.style.height = r.height+'px';
+  canvas.width = Math.floor(r.width * dpr);
+  canvas.height = Math.floor(r.height * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', fitCanvas); fitCanvas();
+
+// Juego
+const G = { level:1, score:0, lives:3, spawn:0, spawnRate:1.2, gravity: 980 };
+let state='idle', last=0;
+
+const fruits=[]; // {x,y,vx,vy,r,color,type,cut:false}
+const particles=[]; // jugo
+const slashes=[]; // para estela de katana
+let pointer = { x:0,y:0, prevX:0, prevY:0, down:false };
+
+const FRUITS = [
+  {color:'#ff5b5b', r:24},
+  {color:'#ffd166', r:20},
+  {color:'#72e06a', r:18},
+  {color:'#6ad0ff', r:22},
+];
+const BOMB_COLOR = '#333';
+
+function spawnFruit(){
+  const {w,h} = metrics();
+  const sideX = Math.random()<0.5 ? -40 : w+40;
+  const x = sideX;
+  const y = h*0.8 + (Math.random()*80 - 40);
+  const speed = 320 + Math.random()*160 + G.level*20;
+  const angle = sideX<0 ? (Math.PI * (0.05 + Math.random()*0.35)) : (Math.PI * (0.6 + Math.random()*0.35));
+  const vx = Math.cos(angle)*speed*(sideX<0?1:-1);
+  const vy = -Math.abs(Math.sin(angle)*speed) - 200;
+  const isBomb = Math.random() < Math.min(0.08 + G.level*0.01, 0.25);
+  if(isBomb){
+    fruits.push({x,y,vx,vy,r:22,color:BOMB_COLOR,type:'bomb',cut:false});
+  }else{
+    const f = FRUITS[Math.floor(Math.random()*FRUITS.length)];
+    fruits.push({x,y,vx,vy,r:f.r,color:f.color,type:'fruit',cut:false});
+  }
+}
+
+function metrics(){
+  const w = canvas.width / (window.devicePixelRatio||1);
+  const h = canvas.height / (window.devicePixelRatio||1);
+  return {w,h};
+}
+
+function startGame(){
+  state='running'; G.level=1; G.score=0; G.lives=3; G.spawn=0; G.spawnRate=1.2;
+  fruits.length=0; particles.length=0; slashes.length=0;
+  requestAnimationFrame(loop);
+}
+function endGame(){
+  state='over';
+  document.getElementById('finalLevel').textContent = G.level;
+  document.getElementById('finalScore').textContent = G.score;
+  document.getElementById('gameover').setAttribute('open','');
+}
+
+function update(dt){
+  const {w,h} = metrics();
+
+  // Spawning progresivo
+  G.spawn -= dt;
+  if(G.spawn <= 0){
+    spawnFruit();
+    if(Math.random()<0.6) spawnFruit();
+    G.spawn = Math.max(0.35, G.spawnRate - G.level*0.04);
+  }
+
+  // Física fruta
+  for(const f of fruits){
+    f.vy += G.gravity*dt;
+    f.x += f.vx*dt; f.y += f.vy*dt;
+  }
+  // Limpiar fuera de pantalla + vidas si se escapan frutas
+  for(let i=fruits.length-1;i>=0;i--){
+    const f = fruits[i];
+    if(f.y > h+80 || f.x < -120 || f.x > w+120){
+      if(f.type==='fruit' && !f.cut){ G.lives--; if(G.lives<=0) return endGame(); }
+      fruits.splice(i,1);
+    }
+  }
+
+  // Colisión con el trazo reciente (último segmento)
+  if(pointer.down){
+    const seg = {x1:pointer.prevX, y1:pointer.prevY, x2:pointer.x, y2:pointer.y};
+    for(const f of fruits){
+      if(f.cut) continue;
+      if(segmentCircle(seg, f)){
+        if(f.type==='bomb'){
+          G.lives--; juice(f.x,f.y,BOMB_COLOR,16);
+          f.cut=true;
+          if(G.lives<=0) return endGame();
+        }else{
+          G.score += 10; juice(f.x,f.y,f.color,24);
+          f.cut = true;
+          const vx = (seg.x2 - seg.x1); const vy = (seg.y2 - seg.y1);
+          const n = Math.hypot(vx,vy) || 1;
+          fruits.push({x:f.x-6, y:f.y, vx:f.vx - (vy/n)*120, vy:f.vy + (vx/n)*120, r:f.r*0.6, color:f.color, type:'piece', cut:true});
+          fruits.push({x:f.x+6, y:f.y, vx:f.vx + (vy/n)*120, vy:f.vy - (vx/n)*120, r:f.r*0.6, color:f.color, type:'piece', cut:true});
+        }
+      }
+    }
+  }
+
+  // Partículas
+  for(const p of particles){ p.vy += 400*dt; p.x += p.vx*dt; p.y += p.vy*dt; p.life -= dt; }
+  for(let i=particles.length-1;i>=0;i--){ if(particles[i].life<=0) particles.splice(i,1); }
+
+  // Dificultad
+  G.level += dt*0.05;
+
+  draw(w,h);
+
+  // HUD
+  document.getElementById('level').textContent = Math.floor(G.level);
+  document.getElementById('score').textContent = G.score;
+  document.getElementById('lives').textContent = G.lives;
+}
+
+function draw(w,h){
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle='rgba(0,0,0,0.05)'; ctx.fillRect(0,h-40,w,40);
+
+  for(const p of particles){
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+    ctx.beginPath(); ctx.arc(p.x,p.y, p.size, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  for(const f of fruits){
+    ctx.fillStyle = f.color;
+    ctx.beginPath(); ctx.arc(f.x,f.y,f.r,0,Math.PI*2); ctx.fill();
+    if(f.type==='bomb'){
+      ctx.strokeStyle='#fff'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(f.x-f.r*0.6,f.y-f.r*0.6); ctx.lineTo(f.x+f.r*0.6,f.y+f.r*0.6); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(f.x+f.r*0.6,f.y-f.r*0.6); ctx.lineTo(f.x-f.r*0.6,f.y+f.r*0.6); ctx.stroke();
+    }
+  }
+
+  for(let i=0;i<slashes.length;i++){
+    const s = slashes[i];
+    ctx.strokeStyle='rgba(255,255,255,0.8)'; ctx.lineWidth = Math.max(2, 10 * s.life);
+    ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2); ctx.stroke();
+    s.life -= 0.08;
+  }
+  for(let i=slashes.length-1;i>=0;i--){ if(slashes[i].life<=0) slashes.splice(i,1); }
+
+  if(pointer.down){ drawKatana(pointer.prevX, pointer.prevY, pointer.x, pointer.y); }
+}
+
+function drawKatana(x1,y1,x2,y2){
+  const angle = Math.atan2(y2-y1, x2-x1);
+  const len = Math.min(120, Math.hypot(x2-x1,y2-y1)*1.4 + 40);
+  const cx = x2, cy = y2;
+
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(angle);
+  ctx.fillStyle = '#e9f0ff'; ctx.strokeStyle = '#9ab6ff'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-len*0.85, -4); ctx.lineTo(10, -1); ctx.lineTo(10, 1); ctx.lineTo(-len*0.85, 4);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(-len*0.85, -2); ctx.lineTo(10, 0); ctx.stroke();
+  ctx.fillStyle = '#333'; ctx.fillRect(-len*0.85-18, -6, 18, 12);
+  ctx.fillStyle = '#ffb74d'; for(let i=-16;i<-2;i+=6){ ctx.fillRect(-len*0.85-16+i, -6, 3, 12); }
+  ctx.restore();
+}
+
+function segmentCircle(seg, c){
+  const {x1,y1,x2,y2} = seg;
+  const vx = x2-x1, vy = y2-y1;
+  const wx = c.x - x1, wy = c.y - y1;
+  const t = Math.max(0, Math.min(1, (wx*vx + wy*vy) / (vx*vx + vy*vy || 1)));
+  const px = x1 + t*vx, py = y1 + t*vy;
+  const d = Math.hypot(c.x - px, c.y - py);
+  if(d < c.r) {
+    slashes.push({x1, y1, x2, y2, life:1});
+    return true;
+  }
+  return false;
+}
+
+function juice(x,y,color,count){
+  for(let i=0;i<count;i++){
+    particles.push({
+      x, y, vx:(Math.random()*2-1)*200, vy:(Math.random()*-1)*300,
+      color, size: Math.random()*6+2, life:0.7+Math.random()*0.5, maxLife:1.2
+    });
+  }
+}
+
+function toCanvas(ev){
+  const r = canvas.getBoundingClientRect();
+  return { x: ev.clientX - r.left, y: ev.clientY - r.top };
+}
+canvas.addEventListener('pointerdown', (e)=>{
+  const p = toCanvas(e);
+  pointer.down = true; pointer.x = pointer.prevX = p.x; pointer.y = pointer.prevY = p.y;
+});
+canvas.addEventListener('pointermove', (e)=>{
+  if(!pointer.down) return;
+  const p = toCanvas(e);
+  pointer.prevX = pointer.x; pointer.prevY = pointer.y;
+  pointer.x = p.x; pointer.y = p.y;
+});
+canvas.addEventListener('pointerup', ()=>{ pointer.down=false; });
+
+function loop(ts){
+  if(state!=='running'){ last=ts; requestAnimationFrame(loop); return; }
+  const dt = Math.min(0.033, (ts-last)/1000); last = ts;
+  update(dt);
+  requestAnimationFrame(loop);
+}
+
+document.getElementById('btnStart').addEventListener('click', ()=>{
+  document.getElementById('start').classList.add('hidden'); startGame();
+});
+document.getElementById('btnAgain').addEventListener('click', ()=>{
+  document.getElementById('gameover').removeAttribute('open');
+  document.getElementById('start').classList.remove('hidden');
+});
+document.getElementById('btnGoBack').addEventListener('click', ()=>{ window.location.href = 'index.php'; });
+document.getElementById('btnBack').addEventListener('click', ()=>{ window.location.href = 'index.php'; });
+
+document.getElementById('btnPause').addEventListener('click', ()=>{
+  if(state==='running'){ state='paused'; document.getElementById('btnPause').textContent='Reanudar'; }
+  else if(state==='paused'){ state='running'; document.getElementById('btnPause').textContent='Pausa'; requestAnimationFrame(loop); }
+});
+window.addEventListener('keydown', (e)=>{ if(e.key==='p'||e.key==='P') document.getElementById('btnPause').click(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0e1320">
+  <title>👴👵 Casa Yayos - Caza Ratas</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body class="game-yayos">
+  
+  <!-- Header -->
+  <header class="game-header">
+    <a href="index.html" class="btn btn-outline btn-small">← Pueblo</a>
+    <div class="hud-chips">
+      <div class="chip">
+        <span class="chip-icon">⭐</span>
+        <span id="hud-score">0</span>
+      </div>
+      <div class="chip">
+        <span class="chip-icon">🍬</span>
+        <span id="hud-candies">0</span>
+      </div>
+    </div>
+  </header>
+  
+  <!-- Área de juego -->
+  <main class="game-main">
+    <div class="game-canvas-wrapper">
+      <canvas id="game-canvas"></canvas>
+    </div>
+    
+    <!-- Overlay inicial -->
+    <div class="game-overlay active" id="game-overlay">
+      <div class="game-overlay-content">
+        <h2>🐀 Caza Ratas</h2>
+        <p>Toca para disparar y no dejes escapar 3 ratas</p>
+        <div class="game-stats">
+          <div class="stat-line">
+            <span>Mejor puntuación:</span>
+            <strong id="best-score">0</strong>
+          </div>
+          <div class="stat-line">
+            <span>Total golosinas:</span>
+            <strong id="total-candies">0</strong>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="btn-start">
+          Comenzar
+        </button>
+      </div>
+    </div>
+  </main>
+  
+  <script type="module" src="js/yayos.js?v=9"></script>
+  
+  <script>
+// Hotfix: cerrar overlays y volver al pueblo
+(function(){
+  if (!document.getElementById('hotfix-hidden-style')) {
+    const style = document.createElement('style');
+    style.id = 'hotfix-hidden-style';
+    style.textContent = `.hidden{display:none!important;pointer-events:none!important}`;
+    document.head.appendChild(style);
+  }
+
+  const goPueblo = ()=> { window.location.href = 'index.html'; };
+  document.getElementById('btnBack')?.addEventListener('click', goPueblo);
+  document.getElementById('btnGoBack')?.addEventListener('click', goPueblo);
+
+  const startEl = document.getElementById('game-overlay');
+  document.getElementById('btn-start')?.addEventListener('click', ()=>{
+    startEl?.classList.remove('active');
+    startEl?.classList.add('hidden');
+  });
+
+  document.querySelectorAll('.modal[open]').forEach(m=>m.removeAttribute('open'));
+
+  window.addEventListener('keydown', (e)=>{
+    if(e.key==='Escape'){
+      startEl?.classList.add('hidden');
+      document.querySelectorAll('.modal[open]').forEach(m=>m.removeAttribute('open'));
+    }
+  });
+})();
+</script>
+  
+</body>
+</html>

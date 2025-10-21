@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎨 Test de Sprites</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+      background: linear-gradient(135deg, #ff4fd8, #b86cff, #27e9ff, #2a56ff);
+      color: white;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    
+    .sprite-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+    }
+    
+    .sprite-card {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 1rem;
+      padding: 1rem;
+      text-align: center;
+      border: 2px solid rgba(255,255,255,0.2);
+    }
+    
+    .sprite-card img {
+      max-width: 150px;
+      max-height: 150px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 0.5rem;
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .sprite-card h3 {
+      margin: 0.5rem 0 0.25rem;
+      font-size: 1rem;
+    }
+    
+    .sprite-card p {
+      margin: 0;
+      font-size: 0.85rem;
+      opacity: 0.8;
+    }
+    
+    .status {
+      padding: 0.5rem 1rem;
+      margin-bottom: 2rem;
+      border-radius: 0.5rem;
+      text-align: center;
+    }
+    
+    .status.ok {
+      background: rgba(0,255,0,0.2);
+      border: 2px solid rgba(0,255,0,0.5);
+    }
+    
+    .status.error {
+      background: rgba(255,0,0,0.2);
+      border: 2px solid rgba(255,0,0,0.5);
+    }
+    
+    .section-title {
+      font-size: 1.5rem;
+      margin: 2rem 0 1rem;
+      text-align: center;
+    }
+    
+    button {
+      padding: 0.7rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #ff4fd8, #b86cff);
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      margin: 0.5rem;
+    }
+    
+    button:hover {
+      filter: brightness(1.2);
+    }
+    
+    .animation-demo {
+      text-align: center;
+      margin: 2rem 0;
+    }
+    
+    #animated-sprite {
+      max-width: 200px;
+    }
+  </style>
+</head>
+<body>
+  
+  <h1>🎨 Test de Sprites de Personajes</h1>
+  
+  <div id="status" class="status">Cargando sprites...</div>
+  
+  <h2 class="section-title">🧒 Aray (Protagonista)</h2>
+  <div class="sprite-grid" id="aray-grid"></div>
+  
+  <h2 class="section-title">👩 Mamá</h2>
+  <div class="sprite-grid" id="mama-grid"></div>
+  
+  <h2 class="section-title">🎬 Demo de Animación</h2>
+  <div class="animation-demo">
+    <img id="animated-sprite" src="assets/img/personaje/aray_base.png" alt="Aray">
+    <br><br>
+    <button onclick="startAnimation()">▶️ Correr</button>
+    <button onclick="stopAnimation()">⏸️ Parar</button>
+    <button onclick="changeExpression('happy')">😊 Feliz</button>
+    <button onclick="changeExpression('angry')">😠 Enfadado</button>
+    <button onclick="changeExpression('sleep')">😴 Dormir</button>
+    <button onclick="changeExpression('neutral')">😐 Neutral</button>
+    <button onclick="changeExpression('idle')">🧍 Base</button>
+  </div>
+  
+  <script type="module">
+    import { 
+      SPRITES, 
+      preloadSprites, 
+      animateRun,
+      getAraySprite,
+      getMamaSprite
+    } from './js/sprites.js';
+    
+    const statusEl = document.getElementById('status');
+    let animationId = null;
+    
+    // Intentar cargar sprites
+    preloadSprites()
+      .then(() => {
+        statusEl.textContent = '✅ Todos los sprites cargados correctamente';
+        statusEl.className = 'status ok';
+        renderSprites();
+      })
+      .catch(err => {
+        statusEl.textContent = '❌ Error al cargar sprites: ' + err.message;
+        statusEl.className = 'status error';
+      });
+    
+    function renderSprites() {
+      // Renderizar sprites de Aray
+      const arayGrid = document.getElementById('aray-grid');
+      
+      // Base
+      addSpriteCard(arayGrid, SPRITES.aray.base, 'Base/Idle', 'Pose neutral de pie');
+      
+      // Run
+      addSpriteCard(arayGrid, SPRITES.aray.run[0], 'Correr Frame 1', 'Animación de correr');
+      addSpriteCard(arayGrid, SPRITES.aray.run[1], 'Correr Frame 2', 'Animación de correr');
+      
+      // Heads
+      addSpriteCard(arayGrid, SPRITES.aray.head.neutral, 'Neutral', 'Expresión neutral');
+      addSpriteCard(arayGrid, SPRITES.aray.head.happy, 'Feliz', 'Expresión feliz 😊');
+      addSpriteCard(arayGrid, SPRITES.aray.head.angry, 'Enfadado', 'Expresión enfadada 😠');
+      addSpriteCard(arayGrid, SPRITES.aray.head.sleep, 'Dormido', 'Expresión dormida 😴');
+      
+      // Renderizar sprites de Mamá
+      const mamaGrid = document.getElementById('mama-grid');
+      
+      addSpriteCard(mamaGrid, SPRITES.mama.base, 'Base', 'Pose neutral');
+      addSpriteCard(mamaGrid, SPRITES.mama.comida, 'Comida', 'Preparando comida 🍳');
+      addSpriteCard(mamaGrid, SPRITES.mama.abrigo, 'Abrigo', 'Con abrigo 🧥');
+      addSpriteCard(mamaGrid, SPRITES.mama.tareas, 'Tareas', 'Haciendo tareas 🧹');
+      addSpriteCard(mamaGrid, SPRITES.mama.bocata, 'Bocata', 'Con bocadillo 🥪');
+      addSpriteCard(mamaGrid, SPRITES.mama.enfadada, 'Enfadada', 'Expresión enfadada 😡');
+    }
+    
+    function addSpriteCard(container, src, title, description) {
+      const card = document.createElement('div');
+      card.className = 'sprite-card';
+      card.innerHTML = `
+        <img src="${src}" alt="${title}" onerror="this.style.border='2px solid red'">
+        <h3>${title}</h3>
+        <p>${description}</p>
+      `;
+      container.appendChild(card);
+    }
+    
+    // Funciones globales para los botones
+    window.startAnimation = function() {
+      const img = document.getElementById('animated-sprite');
+      if (animationId) clearInterval(animationId);
+      animationId = animateRun(img, 8);
+    };
+    
+    window.stopAnimation = function() {
+      if (animationId) {
+        clearInterval(animationId);
+        animationId = null;
+      }
+      document.getElementById('animated-sprite').src = SPRITES.aray.base;
+    };
+    
+    window.changeExpression = function(expression) {
+      if (animationId) {
+        clearInterval(animationId);
+        animationId = null;
+      }
+      const sprite = getAraySprite(expression);
+      document.getElementById('animated-sprite').src = Array.isArray(sprite) ? sprite[0] : sprite;
+    };
+  </script>
+  
+</body>
+</html>
+
+
+

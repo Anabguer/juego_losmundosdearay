@@ -40,7 +40,7 @@ export const onAuthChange = (callback) => {
 export const initializeGoogleAuth = async () => {
   try {
     await GoogleAuth.initialize({
-      clientId: '439019722673-YOUR_WEB_CLIENT_ID.apps.googleusercontent.com', // Se actualizará con el client ID web
+      clientId: '989954746255-gpudi6ehmo4o7drku379b71kudr5t526.apps.googleusercontent.com',
       scopes: ['profile', 'email'],
       grantOfflineAccess: true,
     });

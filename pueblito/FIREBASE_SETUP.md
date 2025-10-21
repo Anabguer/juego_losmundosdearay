@@ -13,10 +13,16 @@
 - ✅ UI de login y ranking implementada
 - ✅ SHA-1 debug generado: `E2:D4:96:99:5E:66:36:B2:B1:FC:CD:84:8E:37:FC:B4:2B:3E:63:6F`
 
+### **Completado:**
+- ✅ WEB_CLIENT_ID configurado: `989954746255-gpudi6ehmo4o7drku379b71kudr5t526.apps.googleusercontent.com`
+- ✅ google-services.json copiado a android/app/
+- ✅ Reglas de Firestore creadas
+- ✅ Persistencia offline habilitada
+- ✅ Funciones de testing implementadas
+
 ### **Pendiente:**
-- ❌ Configurar client ID web en Firebase Console
-- ❌ Configurar reglas de Firestore
 - ❌ Probar en dispositivo Android
+- ❌ Configurar reglas en Firebase Console
 
 ---
 
@@ -30,10 +36,9 @@
    - Authentication → Sign-in method → Google
    - Añadir SHA-1: `E2:D4:96:99:5E:66:36:B2:B1:FC:CD:84:8E:37:FC:B4:2B:3E:63:6F`
 
-3. **Crear client ID web:**
-   - Authentication → Sign-in method → Google → Web SDK configuration
-   - Copiar el "Web client ID"
-   - Actualizar en `capacitor.config.json` y `auth-system.js`
+3. **Client ID web ya configurado:**
+   - ✅ `989954746255-gpudi6ehmo4o7drku379b71kudr5t526.apps.googleusercontent.com`
+   - ✅ Ya actualizado en `capacitor.config.json` y `auth-system.js`
 
 4. **Configurar Firestore:**
    - Firestore Database → Crear base de datos
@@ -66,19 +71,11 @@ service cloud.firestore {
 }
 ```
 
-### **3. Actualizar Configuración**
+### **3. Configuración Completada**
 
-Una vez tengas el **Web Client ID**, actualiza estos archivos:
-
-**`capacitor.config.json`:**
-```json
-"serverClientId": "439019722673-TU_WEB_CLIENT_ID.apps.googleusercontent.com"
-```
-
-**`js/auth-system.js`:**
-```javascript
-clientId: '439019722673-TU_WEB_CLIENT_ID.apps.googleusercontent.com'
-```
+✅ **WEB_CLIENT_ID ya configurado:**
+- `capacitor.config.json`: `989954746255-gpudi6ehmo4o7drku379b71kudr5t526.apps.googleusercontent.com`
+- `js/auth-system.js`: `989954746255-gpudi6ehmo4o7drku379b71kudr5t526.apps.googleusercontent.com`
 
 ---
 
@@ -156,6 +153,27 @@ npm run dev
 ---
 
 ## 🔍 **TESTING**
+
+### **Funciones de Testing Disponibles:**
+
+Abre la consola del navegador y ejecuta:
+
+```javascript
+// Ejecutar todas las pruebas
+await window.testSystem.runAllTests();
+
+// Probar sistema de caramelos
+await window.testSystem.testCandiesSystem();
+
+// Probar sistema de progreso
+await window.testSystem.testProgressSystem();
+
+// Probar ranking
+await window.testSystem.testRankingSystem();
+
+// Ver estado del usuario
+window.testSystem.showUserStatus();
+```
 
 ### **QA Checklist:**
 - [ ] Login Google funciona

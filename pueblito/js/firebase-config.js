@@ -5,7 +5,7 @@
 
 import { initializeApp } from 'firebase/app';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator, enableNetwork, disableNetwork } from 'firebase/firestore';
+import { getFirestore, connectFirestoreEmulator, enableNetwork, disableNetwork, enablePersistentCacheIndexAutoCreation } from 'firebase/firestore';
 
 // Configuración de Firebase (desde google-services.json)
 const firebaseConfig = {
@@ -23,6 +23,14 @@ const app = initializeApp(firebaseConfig);
 // Inicializar servicios
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Habilitar persistencia offline
+try {
+  enablePersistentCacheIndexAutoCreation(db);
+  console.log('✅ Persistencia offline habilitada');
+} catch (error) {
+  console.log('⚠️ Persistencia offline ya habilitada o no disponible');
+}
 
 // Configurar modo offline
 let isOnline = navigator.onLine;

@@ -4,13 +4,14 @@
    ======================================== */
 
 import { getCandies, addCandies, getBest, setBest, saveScoreToServer } from './storage.js';
-import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js';
+import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js?v=3';
 
 const BEST_KEY = 'aray_best_informatica';
 
 // Canvas y contexto
 let canvas, ctx, dpr;
 let animationId;
+let spawnTimer;
 
 // Estado del juego
 const state = {
@@ -22,7 +23,10 @@ const state = {
   nextSpawn: 0,
   spawnInterval: 2000, // 2 segundos entre spawns (constante)
   portTimeLimit: 8000, // 8 segundos para conectar cada puerto
-  speedMultiplier: 1
+  speedMultiplier: 1,
+  batchSize: 1, // nº de pares por oleada (irá subiendo con el nivel)
+  level: 1,
+  levelStep: 10 // cada 10 conexiones sube de nivel
 };
 
 // Tipos de puertos con iconos chulos
@@ -46,22 +50,26 @@ const config = {
 // ====== Init ======
 const initGame = () => {
   state.connected = 0;
+  state.level = 1;
   state.ports = [];
   state.draggedPort = null;
   state.gameOver = false;
-  state.nextSpawn = 0;
+  // Tras los 2 pares iniciales, esperamos un intervalo completo antes de la primera oleada
+  state.nextSpawn = state.spawnInterval;
   state.spawnInterval = 2000; // 2 segundos constante
   state.portTimeLimit = 8000; // 8 segundos constante
   state.speedMultiplier = 1;
+  state.batchSize = 1; // por ahora: 1 par por oleada
   
   setupCanvas();
   updateGameHUD();
   
-  // Spawn progresivo al principio (2 pares iniciales)
-  spawnNewPair();
-  setTimeout(() => spawnNewPair(), 800);
-  
+  // Iniciar bucle
   gameLoop();
+
+  // Planificar oleadas periódicas controladas (evita parpadeos)
+  if (spawnTimer) clearInterval(spawnTimer);
+  spawnTimer = setInterval(tickSpawn, state.spawnInterval);
 };
 
 // Setup canvas
@@ -225,22 +233,6 @@ const gameLoop = (timestamp = 0) => {
   lastTime = timestamp;
   
   if (deltaTime > 0 && deltaTime < 0.1) {
-    // Spawn continuo - siempre aparecen pares nuevos
-    const activePorts = state.ports.filter(p => !p.connected);
-    const currentPairs = Math.floor(activePorts.length / 2);
-    const maxPairs = 6; // Máximo 6 pares siempre
-    
-    state.nextSpawn -= deltaTime * 1000;
-    if (state.nextSpawn <= 0 && currentPairs < maxPairs) {
-      spawnNewPair();
-      state.nextSpawn = state.spawnInterval;
-      
-      // Acelerar el juego gradualmente (solo tiempo, no spawn)
-      if (state.connected % 10 === 0) {
-        state.portTimeLimit = Math.max(4000, state.portTimeLimit - 200); // Solo menos tiempo
-      }
-    }
-    
     // Verificar tiempo límite de puertos
     const now = Date.now();
     for (let i = state.ports.length - 1; i >= 0; i--) {
@@ -256,6 +248,17 @@ const gameLoop = (timestamp = 0) => {
   draw();
   
   animationId = requestAnimationFrame(gameLoop);
+};
+
+// Controla las oleadas sin depender del delta del frame
+const tickSpawn = () => {
+  if (state.gameOver) return;
+  const maxPairs = 6; // límite visual razonable
+  const currentPairs = Math.floor(state.ports.filter(p => !p.connected).length / 2);
+  if (currentPairs >= maxPairs) return;
+
+  // Por ahora: un solo par por intervalo fijo
+  spawnNewPair();
 };
 
 // Dibujar
@@ -508,6 +511,25 @@ const onPointerUp = (e) => {
     port2.connectedTo = port1.id;
     
     state.connected++;
+    // subir nivel cada N conexiones y aumentar dificultad
+    if (state.connected % state.levelStep === 0) {
+      state.level++;
+      // +1 par por intervalo hasta un tope de 3
+      state.batchSize = Math.min(3, state.batchSize + 1);
+      // un pelín más rápido el intervalo, con límite
+      state.spawnInterval = Math.max(1200, state.spawnInterval - 200);
+      if (spawnTimer) {
+        clearInterval(spawnTimer);
+        spawnTimer = setInterval(tickSpawn, state.spawnInterval);
+      }
+      // premio: golosina
+      addCandies(1);
+      celebrateCandyEarned();
+      // overlay de nivel (Lottie) si está disponible
+      if (typeof window !== 'undefined' && typeof window.showLevelUpAnimation === 'function') {
+        window.showLevelUpAnimation(state.level);
+      }
+    }
     
     // Sonido de conexión correcta
     const audioCorrect = new Audio('assets/audio/conectado.mp3');
@@ -569,24 +591,21 @@ const endGame = () => {
   const content = overlay.querySelector('.game-overlay-content');
   
   content.innerHTML = `
-    <h2>😅 Fin del juego</h2>
-    <div class="game-stats">
-      <div class="stat-line">
-        <span>Conexiones:</span>
-        <strong>${state.connected}</strong>
+    <h2 style="margin: 0 0 0.8rem 0; font-size: 1.4rem;">😅 Fin del juego</h2>
+    <div class="game-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 0.8rem 0;">
+      <div class="stat-card" style="background: linear-gradient(135deg, #ff6b9d, #c44569); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(255, 107, 157, 0.3);">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">CONEXIONES</div>
+        <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.connected}</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.connected, bestScore)}</div>
       </div>
-      <div class="stat-line">
-        <span>Mejor puntuación:</span>
-        <strong>${Math.max(state.connected, bestScore)}</strong>
-      </div>
-      <div class="stat-line">
-        <span>Golosinas totales:</span>
-        <strong>${getCandies()}</strong>
+      <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3);">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">NIVEL</div>
+        <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.level}</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.level, parseInt(localStorage.getItem('aray_best_level_informatica')) || 1)}</div>
       </div>
     </div>
-    ${isNewRecord ? '<p style="font-size: 1.5rem; margin: 1rem 0;">🏆 ¡NUEVO RÉCORD! 🏆</p>' : ''}
-    <div style="display: flex; justify-content: center; margin-top: 16px;">
-      <button class="btn btn-primary" id="btn-restart">Reintentar</button>
+    <div style="display: flex; justify-content: center; margin-top: 0.8rem;">
+      <button class="btn btn-primary" id="btn-restart" style="padding: 0.6rem 1.2rem; font-size: 1rem;">Reintentar</button>
     </div>
   `;
   
@@ -607,7 +626,8 @@ const updateGameHUD = () => {
   const connectedEl = document.getElementById('hud-connected');
   const candiesEl = document.getElementById('hud-candies');
   
-  if (connectedEl) connectedEl.textContent = state.connected;
+  // Mostrar niveles en vez de nodos conectados
+  if (connectedEl) connectedEl.textContent = `Nivel ${state.level}`;
   if (candiesEl) candiesEl.textContent = getCandies();
 };
 
@@ -618,8 +638,17 @@ document.addEventListener('DOMContentLoaded', () => {
   initCommonUI();
   
   const bestScore = getBest(BEST_KEY);
-  document.getElementById('best-level').textContent = bestScore;
-  document.getElementById('total-candies').textContent = getCandies();
+  
+  // Solo actualizar elementos que existen
+  const bestLevelEl = document.getElementById('best-level');
+  const totalCandiesEl = document.getElementById('total-candies');
+  
+  if (bestLevelEl) {
+    bestLevelEl.textContent = bestScore;
+  }
+  if (totalCandiesEl) {
+    totalCandiesEl.textContent = getCandies();
+  }
   
   document.getElementById('btn-start').addEventListener('click', () => {
     document.getElementById('game-overlay').classList.add('hidden');

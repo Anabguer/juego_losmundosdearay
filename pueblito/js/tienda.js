@@ -4,7 +4,7 @@
    ======================================== */
 
 import { getCandies, addCandies, getBest, setBest, saveScoreToServer } from './storage.js';
-import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js';
+import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js?v=3';
 
 const BEST_KEY = 'aray_best_tienda';
 
@@ -237,7 +237,7 @@ const draw = () => {
   
   // Sin fondo - el fondo ya está en el body
   
-  // Combo (si hay, arriba centro con estilo bonito)
+  // Combo (si hay, abajo del grid con estilo bonito)
   if (state.combo > 1) {
     ctx.save();
     
@@ -259,13 +259,17 @@ const draw = () => {
     gradient.addColorStop(1, '#ff6b6b');
     
     ctx.fillStyle = gradient;
-    ctx.fillText(comboText, width / 2, 90);
+    
+    // Posicionar abajo del grid
+    const boardSize = state.cellSize * state.gridSize;
+    const comboY = state.offsetY + boardSize + 60; // 60px abajo del grid
+    ctx.fillText(comboText, width / 2, comboY);
     
     // Borde blanco
     ctx.shadowColor = 'transparent';
     ctx.strokeStyle = 'white';
     ctx.lineWidth = 3;
-    ctx.strokeText(comboText, width / 2, 90);
+    ctx.strokeText(comboText, width / 2, comboY);
     
     ctx.restore();
   }
@@ -641,10 +645,15 @@ const processMatches = async () => {
     
     await sleep(300);
     
-    // Sistema de nivel progresivo (silencioso, sin modal)
+    // Sistema de nivel progresivo con animación
     if (state.matchCount >= state.level * 5) {
       state.level++;
       state.matchCount = 0;
+      
+      // Mostrar animación de level up
+      if (typeof window !== 'undefined' && typeof window.showLevelUpAnimation === 'function') {
+        window.showLevelUpAnimation(state.level);
+      }
       
       // Aumentar dificultad
       if (state.level % 3 === 0 && state.candyTypes < ALL_CANDY_TYPES.length) {
@@ -656,6 +665,21 @@ const processMatches = async () => {
     if (state.score > 0 && Math.floor(state.score / 1000) > Math.floor((state.score - points) / 1000)) {
       addCandies(1);
       celebrateCandyEarned();
+    }
+    
+    // Nivel cada 1000 puntos
+    const newLevel = Math.max(1, Math.floor(state.score / 1000) + 1);
+    if (newLevel > state.level) {
+      state.level = newLevel;
+      // Aumentar dificultad: más tipos de golosinas
+      state.candyTypes = Math.min(8, 6 + Math.floor(state.level / 2));
+      // Reducir tiempo de bombas
+      state.bombInterval = Math.max(10, 20 - Math.floor(state.level / 3));
+      addCandies(1);
+      celebrateCandyEarned();
+      if (typeof window !== 'undefined' && typeof window.showLevelUpAnimation === 'function') {
+        window.showLevelUpAnimation(state.level);
+      }
     }
   }
 };
@@ -713,10 +737,16 @@ const endGame = (reason = '⏰ ¡Se acabó el tiempo!') => {
   
   const bestScore = getBest(BEST_KEY);
   const isNewRecord = state.score > bestScore;
+  const bestLevel = parseInt(localStorage.getItem('aray_best_level_tienda')) || 1;
+  const isNewLevelRecord = state.level > bestLevel;
   
   if (isNewRecord) {
     setBest(BEST_KEY, state.score);
     saveScoreToServer('tienda', state.score, { score: state.score, candies: getCandies() });
+  }
+  
+  if (isNewLevelRecord) {
+    localStorage.setItem('aray_best_level_tienda', state.level.toString());
   }
   
   const overlay = document.getElementById('game-overlay');
@@ -724,23 +754,15 @@ const endGame = (reason = '⏰ ¡Se acabó el tiempo!') => {
   
   content.innerHTML = `
     <h2>${reason}</h2>
-    <div class="game-stats">
-      <div class="stat-line">
-        <span>Puntuación:</span>
-        <strong>${state.score}</strong>
-      </div>
-      <div class="stat-line">
-        <span>Mejor puntuación:</span>
-        <strong>${Math.max(state.score, bestScore)}</strong>
-      </div>
-      <div class="stat-line">
-        <span>Golosinas ganadas:</span>
-        <strong>${Math.floor(state.score / 1000)}</strong>
+    <div class="game-stats" style="display: flex; justify-content: center; margin: 0.8rem 0;">
+      <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 120px;">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">NIVEL</div>
+        <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.level}</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.level, parseInt(localStorage.getItem('aray_best_level_tienda')) || 1)}</div>
       </div>
     </div>
-    ${isNewRecord ? '<p style="font-size: 1.5rem; margin: 1rem 0;">🏆 ¡NUEVO RÉCORD! 🏆</p>' : ''}
-    <div style="display: flex; justify-content: center; margin-top: 16px;">
-      <button class="btn btn-primary" id="btn-restart">Reintentar</button>
+    <div style="display: flex; justify-content: center; margin-top: 0.8rem;">
+      <button class="btn btn-primary" id="btn-restart" style="padding: 0.6rem 1.2rem; font-size: 1rem;">Reintentar</button>
     </div>
   `;
   
@@ -761,7 +783,7 @@ const updateGameHUD = () => {
   const scoreEl = document.getElementById('hud-score');
   const candiesEl = document.getElementById('hud-candies');
   
-  if (scoreEl) scoreEl.textContent = state.score;
+  if (scoreEl) scoreEl.textContent = `Nivel ${state.level}`;
   if (candiesEl) candiesEl.textContent = getCandies();
 };
 
@@ -771,9 +793,22 @@ window.updateHUD = updateGameHUD;
 document.addEventListener('DOMContentLoaded', () => {
   initCommonUI();
   
-  const bestScore = getBest(BEST_KEY);
-  document.getElementById('best-score').textContent = bestScore;
-  document.getElementById('total-candies').textContent = getCandies();
+  const bestLevel = getBest('aray_best_level_tienda') || 1;
+  
+  // Solo actualizar elementos que existen
+  const bestLevelEl = document.getElementById('best-level');
+  const bestScoreEl = document.getElementById('best-score');
+  const totalCandiesEl = document.getElementById('total-candies');
+  
+  if (bestLevelEl) {
+    bestLevelEl.textContent = bestLevel;
+  }
+  if (bestScoreEl) {
+    bestScoreEl.textContent = getBest(BEST_KEY);
+  }
+  if (totalCandiesEl) {
+    totalCandiesEl.textContent = getCandies();
+  }
   
   document.getElementById('btn-start').addEventListener('click', () => {
     document.getElementById('game-overlay').classList.add('hidden');

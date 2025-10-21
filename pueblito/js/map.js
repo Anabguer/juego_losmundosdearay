@@ -7,7 +7,7 @@
    ======================================== */
 
 import { getCoins, getEnergy, setEnergy, setCoins, getBest } from './storage.js';
-import { updateHUD, toast, showModal, hideModal, playSound, vibrate } from './ui.js';
+import { updateHUD, toast, showModal, hideModal, playSound, vibrate } from './ui.js?v=3';
 import { getAraySprite } from './sprites.js';
 import { initAuth, isLoggedIn, getCurrentUser, login, register, logout, getRankingGlobal } from './auth.js';
 
@@ -30,8 +30,8 @@ export const MAP = [
   [ 0,11,12, 1, 1, 1, 1,12, 9, 9],  // G (fila 6) ← G2 entrada Info + G3,G4,G5,G6 carretera + G7 entrada Tienda + Tienda G8-G9
   [ 0, 0,11, 1,11,11, 0, 0, 0, 0],  // H (fila 7) ← H3 + tierra H2,H4,H5
   [ 0, 0,11, 1,11,11, 0,13, 9, 0],  // I (fila 8) ← Parque I7-I8-J7-J8 + I3 + tierra I2,I4,I5
-  [ 6, 9,11, 1,16, 1,12, 9, 9, 0],  // J (fila 9) ← Yayos J0-J1-K0-K1 + J3,J4,J5,J6 entrada Parque + tierra J2 + RANKING J4
-  [ 9, 9,12, 1,11,11, 0, 0, 0, 0],  // K (fila 10) ← K2 entrada Yayos + K3 + tierra K4,K5
+  [ 6, 9,11, 1, 1, 1,12, 9, 9, 0],  // J (fila 9) ← Yayos J0-J1-K0-K1 + J3,J4,J5,J6 entrada Parque + tierra J2 + carretera en J4 para acceso al ranking
+  [ 9, 9,12, 1,16,11, 0, 0, 0, 0],  // K (fila 10) ← K2 entrada Yayos + K3 + RANKING K4 (movido) + tierra K5
   [ 0,11,11, 1,11,11, 0, 0, 0, 0],  // L (fila 11) ← L3 + tierra L1,L2,L4,L5
   [ 0, 0,11, 1, 0,11,11, 8, 9, 0],  // M (fila 12) ← Edificio M7-M8-N7-N8 + M3 + tierra M2,M5,M6
   [ 0, 0,11, 1, 1, 1,12, 9, 9, 0],  // N (fila 13) ← N6 entrada Edificio + N3,N4,N5 + tierra N2
@@ -45,15 +45,15 @@ export const MAP = [
 
 // Minijuegos
 const ROUTES = {
-  school: 'cole.html',
-  skate: 'skate.html', // Skate runner
-  park: 'parque.html', // Pacman con Aray
-  gym: 'pabellon.html',
-  yayos: 'yayos.html',
-  informatica: 'informatica.html',
-  edificio: 'edificio.html',
-  tienda: 'tienda.html', // Candy Crush de chuches
-  rio: 'rio.html' // Juego del río
+  school: 'cole.html?v=' + Date.now(),
+  skate: 'skate.html?v=' + Date.now(), // Skate runner
+  park: 'parque.html?v=' + Date.now(), // Pacman con Aray
+  gym: 'pabellon.html?v=' + Date.now(),
+  yayos: 'yayos.html?v=' + Date.now(),
+  informatica: 'informatica.html?v=' + Date.now(),
+  edificio: 'edificio.html?v=' + Date.now(),
+  tienda: 'tienda.html?v=' + Date.now(), // Candy Crush de chuches
+  rio: 'rio.html?v=' + Date.now() // Juego del río
 };
 
 // Estado avatar: posición en celdas (fila/col)
@@ -194,6 +194,35 @@ const renderMap = () => {
         else if (random < 0.7) tile.classList.add('grass-2');
         else if (random < 0.9) tile.classList.add('grass-3');
         else tile.classList.add('grass-4');
+        
+        // Rotación aleatoria para variedad visual
+        const rotation = Math.floor(Math.random() * 4) * 90; // 0°, 90°, 180°, 270°
+        tile.style.transformOrigin = '50% 50%';
+        tile.style.transform = `rotate(${rotation}deg) scale(1.02)`; // Escala leve para evitar microgrietas
+      }
+      
+      // Tierra aleatoria (código 11) - también con rotación
+      if (code === 11) {
+        // Rotación aleatoria para variedad visual
+        const rotation = Math.floor(Math.random() * 4) * 90; // 0°, 90°, 180°, 270°
+        tile.style.transformOrigin = '50% 50%';
+        tile.style.transform = `rotate(${rotation}deg) scale(1.02)`; // Escala leve para evitar microgrietas
+      }
+      
+      // Carreteras aleatorias (código 1) - también con rotación
+      if (code === 1) {
+        // Rotación aleatoria para variedad visual
+        const rotation = Math.floor(Math.random() * 4) * 90; // 0°, 90°, 180°, 270°
+        tile.style.transformOrigin = '50% 50%';
+        tile.style.transform = `rotate(${rotation}deg) scale(1.02)`; // Escala leve para evitar microgrietas
+      }
+      
+      // Casilla de inicio (código 10) - también con rotación
+      if (code === 10) {
+        // Rotación aleatoria para variedad visual
+        const rotation = Math.floor(Math.random() * 4) * 90; // 0°, 90°, 180°, 270°
+        tile.style.transformOrigin = '50% 50%';
+        tile.style.transform = `rotate(${rotation}deg) scale(1.02)`; // Escala leve para evitar microgrietas
       }
       
       // Entradas (código 12) - colorear según edificio cercano

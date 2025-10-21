@@ -4,9 +4,10 @@
    ======================================== */
 
 import { getCandies, addCandies, getBest, setBest, saveScoreToServer } from './storage.js';
-import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js';
+import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js?v=3';
 
 const BEST_KEY = 'aray_best_rio';
+const BEST_LEVEL_KEY = 'aray_best_level_rio';
 
 // Canvas y contexto
 let canvas, ctx, dpr;
@@ -234,10 +235,20 @@ const gameLoop = () => {
     // Subir nivel cada 3 cruces
     if (state.crossings % 3 === 0) {
       state.level++;
+      
+      // Mostrar animación de nivel
+      if (typeof window !== 'undefined' && typeof window.showLevelUpAnimation === 'function') {
+        window.showLevelUpAnimation(state.level);
+      }
+      
       LANES = getLanes(state.level);
       
       // Regenerar troncos con nueva velocidad y tamaño
       state.logs = [];
+      
+      // Premio por subir nivel
+      addCandies(1);
+      celebrateCandyEarned();
       const numLogs = Math.max(2, 4 - Math.floor(state.level / 2)); // Menos troncos en niveles altos
       const spacing = state.cellSize * (6 + state.level * 0.8); // Mucho más espacio entre troncos
       
@@ -391,25 +402,26 @@ const setupControls = () => {
     }
   });
   
-  // Touch - dividir pantalla en 4 zonas
+  // Touch - usar posición de Aray como referencia
   canvas.addEventListener('pointerdown', (e) => {
     if (state.gameOver) return;
     
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const width = rect.width;
-    const height = rect.height;
+    
+    // Calcular posición de Aray en pantalla
+    const arayScreenY = state.offsetY + state.player.gridY * state.cellSize + state.cellSize / 2;
     
     let newX = state.player.gridX;
     let newY = state.player.gridY;
     
-    // Determinar dirección según dónde tocó (solo vertical para Frogger)
-    if (y < height / 2) {
-      // Mitad superior = ARRIBA
+    // Determinar dirección según dónde tocó respecto a Aray
+    if (y < arayScreenY) {
+      // Arriba de Aray = SUBIR
       newY = Math.max(0, state.player.gridY - 1);
     } else {
-      // Mitad inferior = ABAJO
+      // Abajo de Aray = BAJAR
       newY = Math.min(state.rows - 1, state.player.gridY + 1);
     }
     
@@ -439,38 +451,32 @@ const endGame = (reason = '🌊 ¡Caíste al agua!') => {
   
   const bestScore = getBest(BEST_KEY);
   const isNewRecord = state.score > bestScore;
+  const bestLevel = getBest(BEST_LEVEL_KEY) || 1;
+  const isNewLevelRecord = state.level > bestLevel;
   
   if (isNewRecord) {
     setBest(BEST_KEY, state.score);
     saveScoreToServer('rio', state.score, { score: state.score, candies: getCandies() });
   }
   
+  if (isNewLevelRecord) {
+    localStorage.setItem(BEST_LEVEL_KEY, state.level.toString());
+  }
+  
   const overlay = document.getElementById('game-overlay');
   const content = overlay.querySelector('.game-overlay-content');
   
   content.innerHTML = `
-    <h2>${reason}</h2>
-    <div class="game-stats">
-      <div class="stat-line">
-        <span>Cruces exitosos:</span>
-        <strong>${Math.floor(state.score / 50)}</strong>
-      </div>
-      <div class="stat-line">
-        <span>Puntuación:</span>
-        <strong>${state.score}</strong>
-      </div>
-      <div class="stat-line">
-        <span>Mejor puntuación:</span>
-        <strong>${Math.max(state.score, bestScore)}</strong>
-      </div>
-      <div class="stat-line">
-        <span>Golosinas ganadas:</span>
-        <strong>${Math.floor(state.score / 100)}</strong>
+    <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem;">${reason}</h2>
+    <div class="game-stats" style="display: flex; justify-content: center; margin: 0.8rem 0;">
+      <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 120px;">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">NIVEL</div>
+        <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.level}</div>
+        <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.level, parseInt(localStorage.getItem('aray_best_level_rio')) || 1)}</div>
       </div>
     </div>
-    ${isNewRecord ? '<p style="font-size: 1.5rem; margin: 1rem 0;">🏆 ¡NUEVO RÉCORD! 🏆</p>' : ''}
-    <div style="display: flex; justify-content: center; margin-top: 16px;">
-      <button class="btn btn-primary" id="btn-restart">Reintentar</button>
+    <div style="display: flex; justify-content: center; margin-top: 0.8rem;">
+      <button class="btn btn-primary" id="btn-restart" style="padding: 0.6rem 1.2rem; font-size: 1rem;">Reintentar</button>
     </div>
   `;
   
@@ -488,12 +494,10 @@ const endGame = (reason = '🌊 ¡Caíste al agua!') => {
 
 // Actualizar HUD
 const updateGameHUD = () => {
-  const levelEl = document.getElementById('hud-level');
   const scoreEl = document.getElementById('hud-score');
   const candiesEl = document.getElementById('hud-candies');
   
-  if (levelEl) levelEl.textContent = state.level;
-  if (scoreEl) scoreEl.textContent = state.score;
+  if (scoreEl) scoreEl.textContent = `Nivel ${state.level}`;
   if (candiesEl) candiesEl.textContent = getCandies();
 };
 
@@ -505,9 +509,11 @@ document.addEventListener('DOMContentLoaded', () => {
   initCommonUI();
   initCanvas();
   
-  const bestScore = getBest(BEST_KEY);
-  document.getElementById('best-score').textContent = bestScore;
-  document.getElementById('total-candies').textContent = getCandies();
+  const bestLevel = getBest(BEST_LEVEL_KEY) || 1;
+  const bestLevelEl = document.getElementById('best-level');
+  if (bestLevelEl) {
+    bestLevelEl.textContent = bestLevel;
+  }
   
   document.getElementById('btn-start').addEventListener('click', () => {
     const overlay = document.getElementById('game-overlay');

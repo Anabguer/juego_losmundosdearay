@@ -76,7 +76,7 @@ export function showModal(title, contentNode) {
   card.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
       <h2 style="margin:0; font-size:20px; font-weight:900; color:#333;">${title || ''}</h2>
-      <button id="modal-x" class="btn btn-outline" style="padding:4px 12px; color:#d900ff; font-weight:900; font-size:1.2rem;">✕</button>
+      <button id="modal-x" class="btn btn-outline" style="padding:0 !important; color:#d900ff; font-weight:900; font-size:1.2rem; width:24px !important; height:24px !important; border-radius:50% !important; display:flex !important; align-items:center !important; justify-content:center !important; min-width:24px !important; max-width:24px !important; border:none !important; background:rgba(255,255,255,0.25) !important;">✕</button>
     </div>
   `;
   card.appendChild(contentNode);

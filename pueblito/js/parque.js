@@ -4,7 +4,7 @@
    ======================================== */
 
 import { getCandies, addCandies, getBest, setBest, saveScoreToServer } from './storage.js';
-import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js';
+import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js?v=3';
 
 const BEST_KEY = 'aray_best_snake';
 
@@ -24,11 +24,12 @@ const CANDY_COLORS = ['#ff6b6b', '#4ecdc4', '#8b4513', '#ffb347', '#d2691e', '#f
 const state = {
   gameOver: false,
   score: 0,
+  level: 1,
   snake: [],
   direction: 'right',
   nextDirection: 'right',
   food: { x: 0, y: 0, type: 0 }, // type = índice del emoji
-  cellSize: 30,
+  cellSize: 20,
   cols: 0,
   rows: 0,
   moveDelay: 250, // ms entre movimientos (más lento)
@@ -54,6 +55,12 @@ const initCanvas = () => {
       handleKeyPress(e.key);
     }
   });
+  
+  // Controles de botones
+  document.getElementById('btn-up')?.addEventListener('click', () => handleKeyPress('ArrowUp'));
+  document.getElementById('btn-down')?.addEventListener('click', () => handleKeyPress('ArrowDown'));
+  document.getElementById('btn-left')?.addEventListener('click', () => handleKeyPress('ArrowLeft'));
+  document.getElementById('btn-right')?.addEventListener('click', () => handleKeyPress('ArrowRight'));
   
   // Touch controls
   let touchStartX = 0;
@@ -103,13 +110,21 @@ const handleKeyPress = (key) => {
 
 const resizeCanvas = () => {
   const container = canvas.parentElement;
-  const width = container.clientWidth;
-  const height = container.clientHeight;
+  const containerWidth = container.clientWidth;
+  const containerHeight = container.clientHeight;
+  
+        // Tamaño equilibrado - ocupa casi toda la pantalla con márgenes apropiados
+        const width = containerWidth - 20; // 20px margen horizontal
+        const height = containerHeight - 220; // 220px para HUD arriba y controles abajo (más espacio para botones)
   
   canvas.width = width * dpr;
   canvas.height = height * dpr;
   canvas.style.width = width + 'px';
   canvas.style.height = height + 'px';
+  
+  // Centrar el canvas
+  canvas.style.margin = '0 auto';
+  canvas.style.display = 'block';
   
   ctx.scale(dpr, dpr);
   
@@ -188,6 +203,7 @@ const initGame = () => {
   
   state.gameOver = false;
   state.score = 0;
+  state.level = 1;
   state.direction = 'right';
   state.nextDirection = 'right';
   state.lastMove = Date.now();
@@ -334,6 +350,18 @@ const moveSnake = () => {
     // Crecer (no quitar la cola)
     state.score += 10;
     updateGameHUD();
+    // Nivel: cada 50 puntos (5 comidas)
+    const newLevel = Math.max(1, Math.floor(state.score / 50) + 1);
+    if (newLevel > state.level) {
+      state.level = newLevel;
+      // acelerar ligeramente
+      state.moveDelay = Math.max(120, state.moveDelay - 15);
+      addCandies(1);
+      celebrateCandyEarned();
+      if (typeof window !== 'undefined' && typeof window.showLevelUpAnimation === 'function') {
+        window.showLevelUpAnimation(state.level);
+      }
+    }
     
     // Sonido de galleta
     const audio = new Audio('assets/audio/galleta.mp3');
@@ -374,10 +402,16 @@ const endGame = (message = '🐍 Fin del juego') => {
   
   const bestScore = getBest(BEST_KEY);
   const isNewRecord = state.score > bestScore;
+  const bestLevel = parseInt(localStorage.getItem('aray_best_level_parque')) || 1;
+  const isNewLevelRecord = state.level > bestLevel;
   
   if (isNewRecord) {
     setBest(BEST_KEY, state.score);
     saveScoreToServer('snake', state.score, { score: state.score, candies: getCandies() });
+  }
+  
+  if (isNewLevelRecord) {
+    localStorage.setItem('aray_best_level_parque', state.level.toString());
   }
   
   const overlay = document.getElementById('game-overlay');
@@ -385,27 +419,15 @@ const endGame = (message = '🐍 Fin del juego') => {
   
   content.innerHTML = `
     <h2>${message}</h2>
-    <div class="game-stats">
-      <div class="stat-line">
-        <span>Puntuación:</span>
-        <strong>${state.score}</strong>
-      </div>
-      <div class="stat-line">
-        <span>Longitud:</span>
-        <strong>${state.snake.length}</strong>
-      </div>
-      <div class="stat-line">
-        <span>Mejor puntuación:</span>
-        <strong>${Math.max(state.score, bestScore)}</strong>
-      </div>
-      <div class="stat-line">
-        <span>Golosinas ganadas:</span>
-        <strong>${Math.floor(state.score / 100)}</strong>
+    <div class="game-stats" style="display: flex; justify-content: center; margin: 0.8rem 0;">
+      <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 120px;">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">NIVEL</div>
+        <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.level}</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.level, parseInt(localStorage.getItem('aray_best_level_parque')) || 1)}</div>
       </div>
     </div>
-    ${isNewRecord ? '<p style="font-size: 1.5rem; margin: 1rem 0;">🏆 ¡NUEVO RÉCORD! 🏆</p>' : ''}
-    <div style="display: flex; justify-content: center; margin-top: 16px;">
-      <button class="btn btn-primary" id="btn-restart">Reintentar</button>
+    <div style="display: flex; justify-content: center; margin-top: 0.8rem;">
+      <button class="btn btn-primary" id="btn-restart" style="padding: 0.6rem 1.2rem; font-size: 1rem;">Reintentar</button>
     </div>
   `;
   
@@ -426,7 +448,7 @@ const updateGameHUD = () => {
   const scoreEl = document.getElementById('hud-score');
   const candiesEl = document.getElementById('hud-candies');
   
-  if (scoreEl) scoreEl.textContent = state.score;
+  if (scoreEl) scoreEl.textContent = `Nivel ${state.level}`;
   if (candiesEl) candiesEl.textContent = getCandies();
 };
 
@@ -437,9 +459,22 @@ document.addEventListener('DOMContentLoaded', () => {
   initCommonUI();
   initCanvas();
   
-  const bestScore = getBest(BEST_KEY);
-  document.getElementById('best-score').textContent = bestScore;
-  document.getElementById('total-candies').textContent = getCandies();
+  const bestLevel = getBest('aray_best_level_parque') || 1;
+  
+  // Solo actualizar elementos que existen
+  const bestLevelEl = document.getElementById('best-level');
+  const bestScoreEl = document.getElementById('best-score');
+  const totalCandiesEl = document.getElementById('total-candies');
+  
+  if (bestLevelEl) {
+    bestLevelEl.textContent = bestLevel;
+  }
+  if (bestScoreEl) {
+    bestScoreEl.textContent = getBest(BEST_KEY);
+  }
+  if (totalCandiesEl) {
+    totalCandiesEl.textContent = getCandies();
+  }
   
   document.getElementById('btn-start').addEventListener('click', () => {
     document.getElementById('game-overlay').classList.add('hidden');
@@ -447,4 +482,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   updateHUD();
+  
+  // Controles de botones
+  document.getElementById('btn-up')?.addEventListener('click', () => handleKeyPress('ArrowUp'));
+  document.getElementById('btn-down')?.addEventListener('click', () => handleKeyPress('ArrowDown'));
+  document.getElementById('btn-left')?.addEventListener('click', () => handleKeyPress('ArrowLeft'));
+  document.getElementById('btn-right')?.addEventListener('click', () => handleKeyPress('ArrowRight'));
 });

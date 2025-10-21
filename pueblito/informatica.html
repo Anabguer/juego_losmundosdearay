@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <base href="/sistema_apps_upload/pueblito/">
+  <base href="./">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0e1320">
@@ -37,24 +37,23 @@
       <div class="game-overlay-content">
         <h2>🖥️ Conecta los Cables</h2>
         <p>Arrastra cada puerto a su pareja del mismo tipo</p>
-        <div class="game-stats">
-          <div class="stat-line">
-            <span>Mejor puntuación:</span>
-            <strong id="best-level">0</strong>
-          </div>
-          <div class="stat-line">
-            <span>Total golosinas:</span>
-            <strong id="total-candies">0</strong>
+        <div class="game-stats" style="display: flex; justify-content: center; margin: 0.8rem 0;">
+          <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.8rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 120px;">
+            <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">NIVEL MÁS ALTO</div>
+            <div style="font-size: 1.8rem; font-weight: bold; color: white;" id="best-level">1</div>
+            <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor logrado</div>
           </div>
         </div>
-        <button class="btn btn-primary" id="btn-start">
+        <button class="btn btn-primary" id="btn-start" style="margin-top: 0.8rem; padding: 0.6rem 1.2rem; font-size: 1rem;">
           Comenzar
         </button>
       </div>
     </div>
   </main>
   
-  <script type="module" src="js/informatica.js?v=20"></script>
+  <script src="js/background-music.js"></script>
+  <script src="js/levelup.js"></script>
+  <script type="module" src="js/informatica.js?v=25"></script>
   
   <script>
 // Hotfix: cerrar overlays y volver al pueblo

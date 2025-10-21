@@ -2,6 +2,9 @@
    🎨 PUEBLITO DE ARAY - ESTILOS GLOBALES
    ======================================== */
 
+/* Importar fuente Pangolin */
+@import url('https://fonts.googleapis.com/css2?family=Pangolin:wght@400&display=swap');
+
 :root {
   /* Paleta principal */
   --magenta: #ff4fd8;
@@ -38,8 +41,8 @@ html, body {
   width: 100%;
   min-height: 100dvh;
   overflow-x: hidden;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  font-size: clamp(14px, 2.5vw, 18px);
+  font-family: 'Pangolin', cursive, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: clamp(18px, 3.5vw, 24px); /* Letra mucho más grande */
   color: white;
   background: var(--ink);
   -webkit-tap-highlight-color: transparent;
@@ -141,40 +144,43 @@ body.game-informatica {
 
 .hud-stats {
   display: flex;
-  gap: 12px;
+  gap: 6px;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .stat-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   background: transparent;
-  padding: 6px 12px;
-  border-radius: 20px;
+  padding: 4px 8px;
+  border-radius: 15px;
+  border: none;
 }
 
 .stat-icon {
-  font-size: 1.6rem; /* Iconos mucho más grandes */
+  font-size: 1.2rem; /* Iconos más pequeños */
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
 }
 
 .stat-value {
   font-weight: 700;
-  font-size: 1.2rem; /* Números más grandes */
+  font-size: 1rem; /* Números más pequeños */
   color: #fff;
   min-width: 32px;
   text-align: center;
 }
 
-/* Píldora de golosinas con borde fucsia */
+/* Píldora de golosinas igual que la de galletas */
 .candy-pill {
-  background: rgba(255, 255, 255, 0.2);
-  border: 3px solid #d900ff;
-  border-radius: 25px;
-  padding: 6px 14px;
-  gap: 8px;
-  box-shadow: 0 0 15px rgba(217, 0, 255, 0.4);
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 15px;
+  padding: 4px 8px;
+  gap: 4px;
+  box-shadow: none;
 }
 
 .hunger-stat {
@@ -183,8 +189,8 @@ body.game-informatica {
 }
 
 .btn-eat {
-  width: 50px;
-  height: 50px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: linear-gradient(135deg, #ffd54f, #ffb300);
   border: 3px solid rgba(255, 255, 255, 0.3);
@@ -373,18 +379,28 @@ body.game-informatica {
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding: 0.7rem 1.2rem;
-  font-size: 1rem;
-  font-weight: 600;
-  border: none;
-  border-radius: var(--radius-md);
+  padding: 0.4rem 0.6rem; /* ULTRA estrecho */
+  font-size: 2rem; /* Letra más grande para todos los botones */
+  font-weight: bold;
+  border: 3px solid #00ffff !important; /* borde brillante cian */
+  border-radius: 25px !important; /* más redondeado */
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: var(--shadow-soft);
+  box-shadow:
+    0 0 15px rgba(0, 255, 255, 0.6),        /* resplandor del borde */
+    inset 0 2px 0 rgba(255,255,255,0.5),      /* brillo superior (bisel) */
+    inset 0 -4px 0 rgba(0,0,0,0.1),           /* sombra inferior (profundidad) */
+    0 8px 20px rgba(0,0,0,0.25) !important;   /* sombra externa */
   text-decoration: none;
   color: white;
   touch-action: manipulation;
   user-select: none;
+  font-family: 'Pangolin', cursive !important; /* Fuente Pangolin */
+  position: relative !important;
+  overflow: hidden !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.8px !important; /* MISMO ESPACIADO QUE REINTENTAR */
+  min-width: 200px !important; /* MISMO ANCHO MÍNIMO QUE REINTENTAR */
 }
 
 .btn:active {
@@ -393,10 +409,79 @@ body.game-informatica {
 
 .btn-primary {
   background: linear-gradient(135deg, var(--magenta), var(--malva));
+  position: relative;
+  overflow: hidden; /* Para contener las burbujas */
 }
 
+.btn:hover,
 .btn-primary:hover {
   filter: brightness(1.15);
+  box-shadow:
+    0 0 25px rgba(0, 255, 255, 0.9),         /* resplandor del borde más intenso */
+    inset 0 2px 0 rgba(255,255,255,0.7),      /* brillo superior más fuerte */
+    inset 0 -4px 0 rgba(0,0,0,0.15),          /* sombra inferior más profunda */
+    0 12px 30px rgba(0,0,0,0.35) !important;  /* sombra externa más dramática */
+}
+
+/* Botón Reintentar más grande y con efecto "agua con burbujas" */
+button#btn-restart.btn.btn-primary,
+.btn.btn-primary#btn-restart {
+  padding: 1.4rem 2rem !important; /* mucho más alto y ancho */
+  font-size: 2rem !important; /* letras mucho más grandes */
+  line-height: 1 !important; /* texto centrado verticalmente */
+  border-radius: 25px !important; /* botón más redondeado */
+  min-width: 200px !important; /* ancho mínimo fijo */
+  letter-spacing: 0.8px !important;
+  text-transform: uppercase !important;
+  font-family: 'Pangolin', cursive !important; /* Fuente Pangolin */
+  font-weight: bold !important;
+  border: 3px solid #00ffff !important; /* borde brillante cian */
+  box-shadow:
+    0 0 20px rgba(0, 255, 255, 0.8),        /* resplandor del borde */
+    inset 0 2px 0 rgba(255,255,255,0.6),      /* brillo superior (bisel) */
+    inset 0 -6px 0 rgba(0,0,0,0.15),          /* sombra inferior (profundidad) */
+    0 10px 25px rgba(0,0,0,0.3) !important;   /* sombra externa más fuerte */
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* Capa de burbujas */
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.35) 0 10px, transparent 12px),
+              radial-gradient(circle at 70% 40%, rgba(255,255,255,0.25) 0 8px, transparent 10px),
+              radial-gradient(circle at 40% 70%, rgba(255,255,255,0.20) 0 7px, transparent 9px),
+              radial-gradient(circle at 80% 75%, rgba(255,255,255,0.18) 0 6px, transparent 8px),
+              radial-gradient(circle at 55% 55%, rgba(255,255,255,0.22) 0 9px, transparent 11px);
+  mix-blend-mode: screen;
+  opacity: 0.7;
+  animation: bubbleFlow 4s linear infinite;
+  border-radius: inherit;
+}
+
+/* Brillo líquido que se mueve */
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0.12) 30%, rgba(255,255,255,0) 35%) top/100% 65% no-repeat, /* brillo superior curvado */
+    radial-gradient(ellipse at 50% 120%, rgba(0,0,0,0.18), transparent 60%) bottom/120% 60% no-repeat; /* sombreado inferior suave */
+  border-radius: inherit;
+  animation: liquidSweep 6s ease-in-out infinite;
+}
+
+@keyframes bubbleFlow {
+  0% { background-position: 0 0, 0 0, 0 0, 0 0, 0 0; }
+  50% { background-position: 0 -10px, 0 -6px, 0 -8px, 0 -5px, 0 -7px; }
+  100% { background-position: 0 -20px, 0 -12px, 0 -16px, 0 -10px, 0 -14px; }
+}
+
+@keyframes liquidSweep {
+  0%, 100% { transform: translateX(-10%) rotate(25deg); opacity: 0.3; }
+  50% { transform: translateX(10%) rotate(25deg); opacity: 0.55; }
 }
 
 .btn-secondary {
@@ -410,6 +495,8 @@ body.game-informatica {
 .btn-outline {
   background: rgba(255,255,255,0.1);
   border: 2px solid rgba(255,255,255,0.3);
+  padding: 0.3rem 0.5rem !important; /* ULTRA estrecho */
+  font-size: 1.2rem !important; /* Más grande */
 }
 
 .btn-outline:hover {
@@ -417,8 +504,33 @@ body.game-informatica {
 }
 
 .btn-small {
-  padding: 0.4rem 0.8rem;
-  font-size: 0.85rem;
+  padding: 0.3rem 0.5rem !important; /* ULTRA estrecho */
+  font-size: 1.2rem !important; /* Más grande que antes */
+}
+
+/* Botón Pueblo específico - ULTRA estrecho */
+a.btn.btn-outline.btn-small {
+  padding: 0.5rem 0.4rem !important; /* Más alto, mismo ancho */
+  font-size: 0.8rem !important; /* Letra más pequeña */
+  min-width: auto !important; /* Sin ancho mínimo */
+  width: auto !important; /* Ancho automático */
+}
+
+/* Botón de cerrar (X) en modales creado desde js/ui.js */
+button#modal-x.btn.btn-outline {
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  font-size: 14px !important;
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: none !important; /* sin resplandor */
+  border: none !important; /* sin borde cian */
+  background: rgba(255,255,255,0.25) !important; /* fondo suave */
+  margin-left: auto !important; /* empujar a la derecha */
 }
 
 .btn-back {
@@ -458,11 +570,15 @@ body.game-informatica {
   display: grid;
   grid-template-columns: repeat(10, 1fr);
   grid-template-rows: repeat(20, 1fr);
-  gap: 2px; /* Cuadrícula visible */
+  gap: 0; /* Sin espacios entre fichas */
   background: rgba(255,255,255,0.1);
   border-radius: var(--radius-md);
-  padding: 8px;
+  padding: 0;
   box-shadow: var(--shadow-medium);
+  border: 3px solid #00ffff;
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.6), var(--shadow-medium);
+  animation: cyanGlow 2s ease-in-out infinite alternate;
+  overflow: hidden; /* Evitar que las esquinas se salgan */
   direction: ltr;
   grid-auto-flow: row;
 }
@@ -471,6 +587,9 @@ body.game-informatica {
   border-radius: 0; /* Sin bordes para que las imágenes de edificios no se vean divididas */
   position: relative;
   transition: all 0.2s ease;
+  margin: 0; /* Sin márgenes */
+  padding: 0; /* Sin padding */
+  overflow: hidden; /* Evitar que el contenido se salga */
 }
 
 .tile.grass {
@@ -506,6 +625,7 @@ body.game-informatica {
   background-image: url('img/texturas/tierra.png');
   background-size: cover;
   background-position: center;
+  border-radius: 0;
 }
 
 .tile.entrance {
@@ -604,23 +724,32 @@ body.game-informatica {
   background-repeat: no-repeat;
   position: relative;
   box-shadow: 0 0 10px rgba(255, 235, 59, 0.3);
+  border: none;
+  margin: 0; /* Sin espacios */
 }
 
 /* Sin decoraciones - solo la textura de calle.png */
 
 .tile.house {
   background: linear-gradient(180deg, #fff, #f0f0f0);
-  border: 2px solid #666;
+  border: none;
 }
 
 /* Casilla de inicio - igual que carretera normal */
 .tile.start {
-  /* Sin estilos especiales, usa la misma textura de calle.png */
+  background-image: url('img/texturas/calle.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+  box-shadow: 0 0 10px rgba(255, 235, 59, 0.3);
+  border: none;
+  margin: 0; /* Sin espacios */
 }
 
 .tile.school {
   background: linear-gradient(180deg, #fff, #e8f4fd);
-  border: 2px solid var(--azul);
+  border: none;
   position: relative;
 }
 
@@ -628,25 +757,25 @@ body.game-informatica {
 .tile.building-2x2 {
   border: none;
   position: relative;
-  background-size: calc(200% + 2px) calc(200% + 2px); /* Expandir para cubrir el gap */
+  background-size: 200% 200%; /* Tamaño normal sin expansión */
   background-position: top left;
   background-repeat: no-repeat;
   z-index: 2;
   border-radius: 0;
-  /* Expandir ligeramente para cubrir el gap */
-  margin: -1px;
-  padding: 1px;
+  margin: 0; /* Sin margen negativo */
+  padding: 0; /* Sin padding */
+  overflow: hidden; /* Evitar que se salga del contenedor */
 }
 
 /* Las otras 3 partes del edificio */
 .tile.building-part {
   border: none;
-  background-size: calc(200% + 2px) calc(200% + 2px); /* Expandir para cubrir el gap */
+  background-size: 200% 200%; /* Tamaño normal sin expansión */
   background-repeat: no-repeat;
   border-radius: 0;
-  /* Expandir ligeramente para cubrir el gap */
-  margin: -1px;
-  padding: 1px;
+  margin: 0; /* Sin margen negativo */
+  padding: 0; /* Sin padding */
+  overflow: hidden; /* Evitar que se salga del contenedor */
 }
 
 .tile.building-part.top-right {
@@ -663,60 +792,102 @@ body.game-informatica {
 
 .tile.school {
   background-image: url('img/juegos/colegio.png');
-  border-color: var(--azul);
+  border: none;
 }
 
 .tile.skate {
   background-image: url('img/juegos/skate.png');
-  border-color: var(--cian);
+  border: none;
 }
 
 .tile.gym {
   background-image: url('img/juegos/pabellon.png');
-  border-color: var(--magenta);
+  border: none;
 }
 
 .tile.yayos {
   background-image: url('img/juegos/casayayos.png');
-  border-color: #ff9800;
+  border: none;
 }
 
 .tile.informatica {
   background-image: url('img/juegos/informatica.png');
-  border-color: #2196f3;
+  border: none;
 }
 
 .tile.edificio {
   background-image: url('img/juegos/edificio.png');
-  border-color: #9e9e9e;
+  border: none;
 }
 
 .tile.park {
   background-image: url('img/juegos/parque.png');
-  border-color: var(--cian);
+  border: none;
 }
 
 .tile.tienda {
   background-image: url('img/juegos/tienda.png');
-  border-color: #ff69b4;
+  border: none;
 }
 
 .tile.rio {
   background-image: url('img/juegos/rio.png');
-  border-color: #00bcd4;
+  border: none;
 }
 
 .tile.ranking {
   background-image: url('img/juegos/ranking.png');
-  border-color: #FFD700;
+  border: none;
+  border-radius: 0;
   cursor: pointer;
   background-size: cover;
   background-position: center;
+  background-color: rgba(255, 255, 0, 0.4); /* Fondo amarillo brillante */
+  box-shadow: 0 0 10px rgba(255, 255, 0, 0.6); /* Sombra amarilla suave */
+  position: relative;
+  overflow: hidden;
+  animation: rankingGlow 2s ease-in-out infinite alternate; /* Animación de brillo */
+  margin: 0;
+  padding: 0;
+}
+
+@keyframes goldenGlow {
+  0% {
+    box-shadow: 0 0 15px rgba(255, 255, 150, 0.4), inset 0 0 15px rgba(255, 255, 200, 0.2);
+    background-color: rgba(255, 255, 200, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(255, 255, 180, 0.6), inset 0 0 20px rgba(255, 255, 220, 0.3);
+    background-color: rgba(255, 255, 220, 0.4);
+  }
+}
+
+@keyframes rankingGlow {
+  0% {
+    background-color: rgba(255, 255, 0, 0.4);
+    box-shadow: 0 0 10px rgba(255, 255, 0, 0.6);
+  }
+  100% {
+    background-color: rgba(255, 255, 0, 0.7);
+    box-shadow: 0 0 15px rgba(255, 255, 0, 0.9);
+  }
+}
+
+@keyframes cyanGlow {
+  0% {
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.6), var(--shadow-medium);
+    border-color: #00ffff;
+  }
+  100% {
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.9), var(--shadow-medium);
+    border-color: #00e6ff;
+  }
 }
 
 .tile.ranking:hover {
   transform: scale(1.05);
-  box-shadow: var(--shadow-strong);
+  background-color: rgba(255, 255, 0, 0.8);
+  box-shadow: 0 0 20px rgba(255, 255, 0, 1);
 }
 
 .tile.clickable {
@@ -760,40 +931,238 @@ body.game-informatica {
 
 /* Animación sutil solo cuando está quieto (se activa desde JS) */
 .avatar.idle {
-  animation: aray-breathe 3s ease-in-out infinite;
+  animation: aray-float 4s ease-in-out infinite, aray-glow 2s ease-in-out infinite alternate, aray-breathe 3s ease-in-out infinite;
+  position: relative;
+  transform: scale(1.8) !important; /* Más grande y nítido */
+  image-rendering: pixelated; /* Mantener nitidez */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Partículas alrededor de Aray */
+.avatar.idle::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+  animation: aray-particles 3s linear infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.avatar.idle::after {
+  content: '✨';
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  animation: aray-sparkle 2s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Efecto de flotación */
+@keyframes aray-float {
+  0%, 100% { 
+    transform: translateY(0px);
+  }
+  50% { 
+    transform: translateY(-4px);
+  }
+}
+
+/* Efecto de brillo pulsante */
+@keyframes aray-glow {
+  0% {
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+  }
+  100% {
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+  }
 }
 
 @keyframes aray-breathe {
   0%, 100% { 
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
     opacity: 1;
   }
   50% { 
-    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4));
-    opacity: 0.95;
+    opacity: 0.9;
   }
 }
 
-/* Botón de jugar en modal */
+/* Animación de partículas */
+@keyframes aray-particles {
+  0% {
+    transform: rotate(0deg) scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: rotate(180deg) scale(1.2);
+    opacity: 0.6;
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+    opacity: 0.3;
+  }
+}
+
+/* Animación de chispa */
+@keyframes aray-sparkle {
+  0%, 100% {
+    transform: translateX(-50%) scale(0.8) rotate(0deg);
+    opacity: 0.7;
+  }
+  25% {
+    transform: translateX(-50%) scale(1.2) rotate(90deg);
+    opacity: 1;
+  }
+  50% {
+    transform: translateX(-50%) scale(1) rotate(180deg);
+    opacity: 0.8;
+  }
+  75% {
+    transform: translateX(-50%) scale(1.1) rotate(270deg);
+    opacity: 0.9;
+  }
+}
+
+/* Botón de jugar en modal - EXACTAMENTE IGUAL QUE REINTENTAR */
 .btn-modal-play {
-  width: 100%;
-  padding: 16px 24px;
-  background: linear-gradient(135deg, #ff6b9d, #c44569);
-  color: white;
-  border: none;
-  border-radius: 30px;
-  font-size: 1.1rem;
-  font-weight: 900;
-  cursor: pointer;
-  box-shadow: 0 6px 20px rgba(255, 107, 157, 0.4);
-  transition: all 0.3s ease;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  padding: 1.4rem 2rem !important; /* mismo tamaño que Reintentar */
+  font-size: 2rem !important; /* mismo tamaño de letra que Reintentar */
+  line-height: 1 !important; /* texto centrado verticalmente */
+  border-radius: 25px !important; /* mismo radio que Reintentar */
+  min-width: 200px !important; /* mismo ancho mínimo que Reintentar */
+  letter-spacing: 0.8px !important;
+  text-transform: uppercase !important;
+  font-family: 'Pangolin', cursive !important; /* Fuente Pangolin */
+  font-weight: bold !important;
+  border: 3px solid #00ffff !important; /* borde brillante cian */
+  box-shadow:
+    0 0 20px rgba(0, 255, 255, 0.8),        /* resplandor del borde */
+    inset 0 2px 0 rgba(255,255,255,0.6),      /* brillo superior (bisel) */
+    inset 0 -6px 0 rgba(0,0,0,0.15),          /* sombra inferior (profundidad) */
+    0 10px 25px rgba(0,0,0,0.3) !important;   /* sombra externa más fuerte */
+  position: relative !important;
+  overflow: hidden !important;
+  margin: 0 auto !important; /* Centrar el botón */
+  background: linear-gradient(135deg, #ff6b9d, #c44569) !important; /* Fondo visible como Reintentar */
+  color: #ffffff !important;
+}
+
+/* Efectos de burbujas para Jugar Ahora */
+.btn-modal-play::before {
+  content: '';
+  position: absolute;
+  inset: 0; /* cubrir todo el botón */
+  background: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.35) 0 10px, transparent 12px),
+              radial-gradient(circle at 70% 40%, rgba(255,255,255,0.25) 0 8px, transparent 10px),
+              radial-gradient(circle at 40% 70%, rgba(255,255,255,0.20) 0 7px, transparent 9px),
+              radial-gradient(circle at 80% 75%, rgba(255,255,255,0.18) 0 6px, transparent 8px),
+              radial-gradient(circle at 55% 55%, rgba(255,255,255,0.22) 0 9px, transparent 11px);
+  mix-blend-mode: screen;
+  opacity: 0.7;
+  animation: bubbleFlow 4s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+.btn-modal-play::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0.12) 30%, rgba(255,255,255,0) 35%) top/100% 65% no-repeat,
+    radial-gradient(ellipse at 50% 120%, rgba(0,0,0,0.18), transparent 60%) bottom/120% 60% no-repeat;
+  border-radius: inherit;
+  animation: liquidSweep 6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 2;
 }
 
 .btn-modal-play:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(255, 107, 157, 0.6);
+  box-shadow:
+    0 0 30px rgba(0, 255, 255, 1),           /* resplandor del borde más intenso */
+    inset 0 2px 0 rgba(255,255,255,0.8),      /* brillo superior más fuerte */
+    inset 0 -6px 0 rgba(0,0,0,0.2),           /* sombra inferior más profunda */
+    0 15px 35px rgba(0,0,0,0.4) !important;   /* sombra externa más dramática */
+}
+
+/* Botón Comenzar - EXACTAMENTE IGUAL QUE REINTENTAR */
+button#btn-start.btn.btn-primary,
+.btn.btn-primary#btn-start {
+  padding: 1.4rem 2rem !important; /* mismo tamaño que Reintentar */
+  font-size: 2rem !important; /* mismo tamaño de letra que Reintentar */
+  line-height: 1 !important; /* texto centrado verticalmente */
+  border-radius: 25px !important; /* mismo radio que Reintentar */
+  min-width: 200px !important; /* mismo ancho mínimo que Reintentar */
+  letter-spacing: 0.8px !important;
+  text-transform: uppercase !important;
+  font-family: 'Pangolin', cursive !important; /* Fuente Pangolin */
+  font-weight: bold !important;
+  border: 3px solid #00ffff !important; /* borde brillante cian */
+  box-shadow:
+    0 0 20px rgba(0, 255, 255, 0.8),        /* resplandor del borde */
+    inset 0 2px 0 rgba(255,255,255,0.6),      /* brillo superior (bisel) */
+    inset 0 -6px 0 rgba(0,0,0,0.15),          /* sombra inferior (profundidad) */
+    0 10px 25px rgba(0,0,0,0.3) !important;   /* sombra externa más fuerte */
+  position: relative !important;
+  overflow: hidden !important;
+  display: inline-flex !important; /* asegurar capas visibles y centrado */
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+button#btn-start.btn.btn-primary:hover,
+.btn.btn-primary#btn-start:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 30px rgba(0, 255, 255, 1),           /* resplandor del borde más intenso */
+    inset 0 2px 0 rgba(255,255,255,0.8),      /* brillo superior más fuerte */
+    inset 0 -6px 0 rgba(0,0,0,0.2),           /* sombra inferior más profunda */
+    0 15px 35px rgba(0,0,0,0.4) !important;   /* sombra externa más dramática */
+}
+
+/* Efectos de burbujas para Comenzar - EXACTAMENTE IGUAL QUE REINTENTAR */
+button#btn-start.btn.btn-primary::before,
+.btn.btn-primary#btn-start::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.35) 0 10px, transparent 12px),
+              radial-gradient(circle at 70% 40%, rgba(255,255,255,0.25) 0 8px, transparent 10px),
+              radial-gradient(circle at 40% 70%, rgba(255,255,255,0.20) 0 7px, transparent 9px),
+              radial-gradient(circle at 80% 75%, rgba(255,255,255,0.18) 0 6px, transparent 8px),
+              radial-gradient(circle at 55% 55%, rgba(255,255,255,0.22) 0 9px, transparent 11px);
+  mix-blend-mode: screen;
+  opacity: 0.7;
+  animation: bubbleFlow 4s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+button#btn-start.btn.btn-primary::after,
+.btn.btn-primary#btn-start::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0.12) 30%, rgba(255,255,255,0) 35%) top/100% 65% no-repeat,
+    radial-gradient(ellipse at 50% 120%, rgba(0,0,0,0.18), transparent 60%) bottom/120% 60% no-repeat;
+  border-radius: inherit;
+  animation: liquidSweep 6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 2;
 }
 
 .btn-modal-play:active {
@@ -866,16 +1235,18 @@ canvas {
 }
 
 .game-overlay h2 {
-  font-size: clamp(1.5rem, 5vw, 2.5rem);
+  font-size: clamp(2rem, 6vw, 3.5rem); /* Títulos mucho más grandes */
   margin: 0;
   color: #d900ff; /* Fucsia alegre */
   text-shadow: 0 2px 4px rgba(217, 0, 255, 0.2);
+  font-weight: bold;
 }
 
 .game-overlay p {
-  font-size: 1.1rem;
+  font-size: 1.4rem; /* Texto más grande */
   color: #333; /* Texto oscuro para fondo claro */
   opacity: 0.9;
+  font-weight: 500;
 }
 
 .game-stats {
@@ -890,14 +1261,22 @@ canvas {
 .stat-line {
   display: flex;
   justify-content: space-between;
-  font-size: 1rem;
+  font-size: 1.3rem; /* Estadísticas más grandes */
   color: #333; /* Texto oscuro para fondo claro */
+  column-gap: 10px; /* Separación clara entre etiqueta y valor */
+  font-weight: 500;
 }
 
 .stat-line strong {
   color: #d900ff; /* Números en fucsia */
   font-weight: 900;
   white-space: nowrap; /* Evitar separación del número y unidad */
+  margin-left: 8px; /* Espacio respecto a la etiqueta */
+}
+
+/* Asegurar separación también si la etiqueta está en un <span> */
+.stat-line span:first-child {
+  margin-right: 6px;
 }
 
 /* ========================================
@@ -1261,7 +1640,7 @@ canvas {
 .modal-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: right; /* X a la derecha */
   margin-bottom: var(--gap-md);
 }
 
@@ -1271,13 +1650,14 @@ canvas {
 }
 
 .modal-close {
-  background: rgba(255,255,255,0.2);
-  border: none;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  border: none !important;
+  width: 28px; /* más pequeño y exacto */
+  height: 28px;
+  padding: 0 !important;
+  border-radius: 50% !important; /* asegurar círculo */
   cursor: pointer;
-  font-size: 1.2rem;
+  font-size: 14px; /* X más proporcionada */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1332,22 +1712,23 @@ canvas {
 .hunger-bar-container {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  padding: 6px 16px;
-  min-width: 220px; /* Más ancha sin el contador */
+  gap: 0.3rem;
+  padding: 3px 8px;
+  min-width: 140px; /* Mucho más estrecha */
   background: rgba(255, 255, 255, 0.15);
-  border-radius: 25px;
+  border-radius: 15px;
+  border: none;
 }
 
 .hunger-bar {
   flex: 1;
-  height: 18px; /* Más alta */
+  height: 14px; /* Más compacta */
   background: rgba(0, 0, 0, 0.3);
   border-radius: 20px;
   overflow: hidden;
   border: 2px solid rgba(255,255,255,0.4);
   position: relative;
-  min-width: 140px; /* Más ancha sin el número */
+  min-width: 100px; /* Mucho más estrecha */
 }
 
 .hunger-bar-fill {
@@ -1423,12 +1804,12 @@ canvas {
   }
   
   .hunger-bar-container {
-    min-width: 260px;
+    min-width: 160px;
   }
   
   .btn-eat {
-    width: 60px;
-    height: 60px;
+    width: 70px;
+    height: 70px;
   }
   
   .map-container {
@@ -1498,25 +1879,25 @@ canvas {
   }
   
   .candy-pill {
-    padding: 4px 10px;
-    border: 2px solid #d900ff;
-    gap: 5px;
+    padding: 3px 6px;
+    border: none;
+    gap: 3px;
   }
   
   .hunger-bar-container {
-    min-width: 160px !important; /* Más estrecha */
-    padding: 4px 10px;
-    gap: 0.4rem;
+    min-width: 120px !important; /* Más estrecha */
+    padding: 2px 6px;
+    gap: 0.2rem;
   }
   
   .hunger-bar {
-    height: 14px !important; /* Más baja */
-    min-width: 100px !important; /* Más estrecha */
+    height: 12px !important; /* Más baja */
+    min-width: 60px !important; /* Más estrecha */
   }
   
   .btn-eat {
-    width: 40px !important; /* Más pequeño */
-    height: 40px !important;
+    width: 50px !important; /* Más grande */
+    height: 50px !important;
     border: 2px solid rgba(255, 255, 255, 0.3);
   }
   
@@ -1546,23 +1927,87 @@ canvas {
   }
   
   .candy-pill {
-    padding: 3px 8px;
+    padding: 2px 4px;
+    gap: 2px;
+  }
+  
+  .hunger-bar-container {
+    min-width: 100px !important; /* Más estrecha aún */
+    padding: 2px 4px;
+  }
+  
+  .hunger-bar {
+    height: 10px !important; /* Más baja */
+    min-width: 50px !important; /* Más estrecha */
+  }
+  
+  .btn-eat {
+    width: 45px !important; /* Más grande */
+    height: 45px !important;
+  }
+}
+
+/* Pantallas medianas - Mejor distribución */
+@media (max-width: 480px) and (min-width: 361px) {
+  .hud-stats {
     gap: 4px;
   }
   
   .hunger-bar-container {
-    min-width: 140px !important; /* Más estrecha aún */
-    padding: 3px 8px;
+    min-width: 110px !important;
+    padding: 2px 5px;
   }
   
   .hunger-bar {
-    height: 12px !important; /* Más baja */
-    min-width: 80px !important; /* Más estrecha */
+    min-width: 45px !important;
+    height: 9px !important;
   }
   
   .btn-eat {
-    width: 35px !important; /* Mini */
-    height: 35px !important;
+    width: 42px !important;
+    height: 42px !important;
+  }
+}
+
+/* Pantallas muy pequeñas - Asegurar que el botón se vea */
+@media (max-width: 360px) {
+  .hud-stats {
+    gap: 4px;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .stat-item {
+    padding: 2px 6px;
+    gap: 2px;
+  }
+  
+  .stat-icon {
+    font-size: 1rem;
+  }
+  
+  .stat-value {
+    font-size: 0.9rem;
+  }
+  
+  .hunger-bar-container {
+    min-width: 90px !important;
+    padding: 1px 4px;
+  }
+  
+  .hunger-bar {
+    min-width: 40px !important;
+    height: 8px !important;
+  }
+  
+  .btn-eat {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  
+  .btn-eat-icon {
+    width: 16px !important;
+    height: 16px !important;
   }
 }
 

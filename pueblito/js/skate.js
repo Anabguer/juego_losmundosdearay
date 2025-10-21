@@ -3,7 +3,7 @@
    ======================================== */
 
 import { getCandies, addCandies, getBestParque, setBestParque, saveScoreToServer } from './storage.js';
-import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js';
+import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js?v=3';
 
 // Canvas y contexto
 let canvas, ctx, dpr;
@@ -49,6 +49,7 @@ const state = {
   lastCandyDistance: 0, // Última distancia donde diste golosina
   gameOver: false,
   running: false,
+  level: 1,
   lastObstacleSpawn: 0,
   lastCoinSpawn: 0,
   lastCloudSpawn: 0
@@ -115,6 +116,7 @@ const initGame = () => {
   
   // Reset estado
   state.distance = 0;
+  state.level = 1;
   state.speed = state.baseSpeed;
   state.isJumping = false;
   state.jumpVelocity = 0;
@@ -317,6 +319,21 @@ const gameLoop = () => {
   // Dibujar jugador
   drawPlayer();
   
+  // Progresión de nivel por distancia (cada 300m)
+  const newLevel = Math.max(1, Math.floor(state.distance / 300) + 1);
+  if (newLevel > state.level) {
+    state.level = newLevel;
+    // subir levemente la velocidad base
+    state.baseSpeed += 10;
+    state.speed = state.baseSpeed;
+    // premio
+    addCandies(1);
+    celebrateCandyEarned();
+    if (typeof window !== 'undefined' && typeof window.showLevelUpAnimation === 'function') {
+      window.showLevelUpAnimation(state.level);
+    }
+  }
+
   // Dibujar HUD en canvas
   // Actualizar HUD (solo header, no canvas)
   updateGameHUD();
@@ -533,9 +550,54 @@ const checkCollision = (player, obstacle) => {
   );
 };
 
-// Dibujar suelo (sin líneas - limpio para el fondo)
+// Dibujar suelo con efecto de movimiento
 const drawGround = () => {
-  // No dibujamos nada - el fondo del body es suficiente
+  const width = canvas.width / dpr;
+  const height = canvas.height / dpr;
+  const groundY = height - 100; // Altura del suelo
+  
+  ctx.save();
+  
+  // Dibujar puntitos de tierra en diferentes alturas
+  ctx.fillStyle = '#8B4513';
+  
+  // Fila superior de puntos
+  for (let i = 0; i < 15; i++) {
+    const x = (state.groundX * 0.8 + i * 60) % width;
+    const y = groundY - 50 + Math.sin(state.groundX * 0.01 + i) * 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 1.5 + Math.sin(state.groundX * 0.02 + i) * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  
+  // Fila media de puntos
+  for (let i = 0; i < 12; i++) {
+    const x = (state.groundX * 0.6 + i * 80) % width;
+    const y = groundY - 30 + Math.sin(state.groundX * 0.015 + i) * 3;
+    ctx.beginPath();
+    ctx.arc(x, y, 2 + Math.sin(state.groundX * 0.025 + i) * 0.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  
+  // Fila inferior de puntos (más grandes)
+  for (let i = 0; i < 10; i++) {
+    const x = (state.groundX * 0.4 + i * 100) % width;
+    const y = groundY - 10 + Math.sin(state.groundX * 0.008 + i) * 4;
+    ctx.beginPath();
+    ctx.arc(x, y, 2.5 + Math.sin(state.groundX * 0.03 + i) * 1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  
+  // Puntos más pequeños dispersos
+  for (let i = 0; i < 20; i++) {
+    const x = (state.groundX * 1.2 + i * 40) % width;
+    const y = groundY - 60 + Math.random() * 40;
+    ctx.beginPath();
+    ctx.arc(x, y, 0.8 + Math.random() * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  
+  ctx.restore();
 };
 
 // Dibujar jugador
@@ -602,6 +664,12 @@ const endGame = () => {
     saveScoreToServer('parque', finalDistance, { candies: getCandies() });
   }
   
+  // Guardar mejor nivel
+  const bestLevel = localStorage.getItem('aray_best_level_skate') || 1;
+  if (state.level > bestLevel) {
+    localStorage.setItem('aray_best_level_skate', state.level);
+  }
+  
   const overlay = document.getElementById('game-overlay');
   console.log('🔍 Overlay encontrado:', overlay);
   
@@ -614,24 +682,21 @@ const endGame = () => {
   console.log('🔍 Content encontrado:', content);
   
   content.innerHTML = `
-    <h2>💥 Chocaste</h2>
-    <div class="game-stats">
-      <div class="stat-line">
-        <span>Distancia:</span>
-        <strong>${finalDistance}<span style="color: #d900ff;">m</span></strong>
+    <h2 style="margin: 0 0 0.8rem 0; font-size: 1.4rem;">💥 Chocaste</h2>
+    <div class="game-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 0.8rem 0;">
+      <div class="stat-card" style="background: linear-gradient(135deg, #ff6b9d, #c44569); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(255, 107, 157, 0.3);">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">DISTANCIA</div>
+        <div style="font-size: 1.6rem; font-weight: bold; color: white;">${finalDistance}<span style="color: #ffd700;">m</span></div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(finalDistance, bestDistance)}m</div>
       </div>
-      <div class="stat-line">
-        <span>Mejor distancia:</span>
-        <strong>${Math.max(finalDistance, bestDistance)}<span style="color: #d900ff;">m</span></strong>
-      </div>
-      <div class="stat-line">
-        <span>Golosinas totales:</span>
-        <strong>${getCandies()}</strong>
+      <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3);">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">NIVEL</div>
+        <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.level}</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.level, parseInt(localStorage.getItem('aray_best_level_skate')) || 1)}</div>
       </div>
     </div>
-    ${isNewRecord ? '<p style="font-size: 1.5rem; margin: 1rem 0;">🏆 ¡NUEVO RÉCORD! 🏆</p>' : ''}
-    <div style="display: flex; justify-content: center; margin-top: 16px;">
-      <button class="btn btn-primary" id="btn-restart">Reintentar</button>
+    <div style="display: flex; justify-content: center; margin-top: 0.8rem;">
+      <button class="btn btn-primary" id="btn-restart" style="padding: 0.6rem 1.2rem; font-size: 1rem;">Reintentar</button>
     </div>
   `;
   
@@ -680,7 +745,7 @@ const updateGameHUD = () => {
   const distEl = document.getElementById('hud-distance');
   const candiesEl = document.getElementById('hud-candies');
   
-  if (distEl) distEl.textContent = Math.floor(state.distance);
+  if (distEl) distEl.textContent = `Nivel ${state.level}`;
   if (candiesEl) candiesEl.textContent = getCandies();
   // hud-speed eliminado del HTML
 };
@@ -757,12 +822,20 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Mostrar stats iniciales
   const bestDist = getBestParque();
-  const totalCandy = getCandies();
+  const bestLevel = localStorage.getItem('aray_best_level_skate') || 1;
   
-  console.log('📊 Stats:', { bestDist, totalCandy });
+  console.log('📊 Stats:', { bestDist, bestLevel });
   
-  document.getElementById('best-distance').textContent = bestDist;
-  document.getElementById('total-candies').textContent = totalCandy;
+  // Solo actualizar elementos que existen
+  const bestDistanceEl = document.getElementById('best-distance');
+  const bestLevelEl = document.getElementById('best-level');
+  
+  if (bestDistanceEl) {
+    bestDistanceEl.textContent = bestDist;
+  }
+  if (bestLevelEl) {
+    bestLevelEl.textContent = bestLevel;
+  }
   
   // Botón start
   const btnStart = document.getElementById('btn-start');

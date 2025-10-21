@@ -4,7 +4,7 @@
    ======================================== */
 
 import { getCandies, addCandies, getBest, setBest, saveScoreToServer } from './storage.js';
-import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js';
+import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js?v=3';
 
 const BEST_KEY = 'aray_best_cole';
 
@@ -180,6 +180,15 @@ const levelUp = () => {
   
   vibrate([50, 30, 50]);
   toast(`🎉 ¡NIVEL ${state.level}! 🎉`, 2000);
+
+  // Animación Lottie de Level Up en grande (si está disponible)
+  try {
+    if (typeof window !== 'undefined' && typeof window.showLevelUpAnimation === 'function') {
+      window.showLevelUpAnimation(state.level);
+    }
+  } catch (err) {
+    console.log('LevelUp animation no disponible:', err);
+  }
   
   // Golosina por subir de nivel
   addCandies(1);
@@ -290,8 +299,8 @@ const onCanvasClick = (e) => {
       state.items.splice(i, 1);
       
       if (item.isDemonio) {
-        // ¡Tocó un demonio! GAME OVER DIRECTO
-        createParticle(item.x, item.y, '💀', '#f44336');
+        // ¡Tocó un demonio! efecto impacto + game over
+        zombieHitEffect(item.x, item.y);
         playSound('fail');
         vibrate([300, 100, 300]);
         const msg = GAME_OVER_MESSAGES.demonio[Math.floor(Math.random() * GAME_OVER_MESSAGES.demonio.length)];
@@ -309,7 +318,8 @@ const onCanvasClick = (e) => {
         audio.volume = 0.5;
         audio.play().catch(e => console.log('Audio no disponible'));
         
-        createParticle(item.x, item.y, '+' + points, '#4caf50');
+        // Partículas brillantes al salvar a un amigo
+        saveParticlesBurst(item.x, item.y);
         
         // Golosina cada 50 puntos
         if (state.score % 50 === 0) {
@@ -366,6 +376,75 @@ const createParticle = (x, y, text, color) => {
   drawParticle();
 };
 
+// Partículas brillantes al rescatar (no confeti, puntos luminosos)
+const saveParticlesBurst = (x, y) => {
+  const colors = ['rgba(255,255,255,1)', 'rgba(0,255,255,1)', 'rgba(255,255,150,1)'];
+  const particles = Array.from({ length: 25 }, () => ({
+    x, y,
+    vx: (Math.random() - 0.5) * 4,
+    vy: (Math.random() - 1.5) * 4,
+    size: 2 + Math.random() * 3,
+    life: 700 + Math.random() * 400,
+    born: Date.now(),
+    color: colors[Math.floor(Math.random() * colors.length)]
+  }));
+
+  const draw = () => {
+    const now = Date.now();
+    let alive = false;
+    particles.forEach(p => {
+      const age = now - p.born;
+      if (age < p.life) {
+        alive = true;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.08; // leve gravedad
+        const alpha = 1 - age / p.life;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.globalCompositeOperation = 'lighter';
+        // dibujar como círculo suave
+        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3);
+        grad.addColorStop(0, p.color);
+        grad.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    });
+    if (alive) requestAnimationFrame(draw);
+  };
+  draw();
+};
+
+// Golpe de zombie/demonio
+const zombieHitEffect = (x, y) => {
+  const start = Date.now();
+  const dur = 300;
+  const draw = () => {
+    const t = Date.now() - start;
+    if (t > dur) return;
+    const p = t / dur;
+    const alpha = 0.7 * (1 - p);
+    const radius = 80 + 40 * p;
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.globalAlpha = alpha;
+    const grd = ctx.createRadialGradient(x, y, 0, x, y, radius);
+    grd.addColorStop(0, 'rgba(255,0,0,0.9)');
+    grd.addColorStop(1, 'rgba(255,0,0,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    requestAnimationFrame(draw);
+  };
+  draw();
+};
+
 // Fin del juego
 const endGame = () => {
   state.gameOver = true;
@@ -390,28 +469,21 @@ const endGame = () => {
   const content = overlay.querySelector('.game-overlay-content');
   
   content.innerHTML = `
-    <h2>😅 Fin del juego</h2>
-    <div class="game-stats">
-      <div class="stat-line">
-        <span>Nivel alcanzado:</span>
-        <strong>Nivel ${state.level}</strong>
+    <h2 style="margin: 0 0 0.8rem 0; font-size: 1.4rem;">😅 Fin del juego</h2>
+    <div class="game-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 0.8rem 0;">
+      <div class="stat-card" style="background: linear-gradient(135deg, #ff6b9d, #c44569); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(255, 107, 157, 0.3); min-width: 100px;">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">AMIGOS</div>
+        <div style="font-size: 1.6rem; font-weight: bold; color: white;">${Math.floor(state.score / 10)}</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Puntos: ${state.score}</div>
       </div>
-      <div class="stat-line">
-        <span>Puntuación:</span>
-        <strong>${state.score} puntos</strong>
-      </div>
-      <div class="stat-line">
-        <span>Mejor nivel:</span>
-        <strong>Nivel ${Math.max(state.level, bestLevel)}</strong>
-      </div>
-      <div class="stat-line">
-        <span>Golosinas totales:</span>
-        <strong>${getCandies()}</strong>
+      <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 100px;">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">NIVEL</div>
+        <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.level}</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.level, bestLevel)}</div>
       </div>
     </div>
-    ${isNewRecord ? '<p style="font-size: 1.5rem; margin: 1rem 0;">🏆 ¡NUEVO NIVEL RÉCORD! 🏆</p>' : ''}
-    <div style="display: flex; justify-content: center; margin-top: 16px;">
-      <button class="btn btn-primary" id="btn-restart">Reintentar</button>
+    <div style="display: flex; justify-content: center; margin-top: 0.8rem;">
+      <button class="btn btn-primary" id="btn-restart" style="padding: 0.6rem 1.2rem; font-size: 1rem;">Reintentar</button>
     </div>
   `;
   
@@ -477,8 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Mostrar stats iniciales
   const bestLevel = getBest(BEST_KEY);
-  document.getElementById('best-score').textContent = bestLevel > 0 ? `Nivel ${bestLevel}` : '0';
-  document.getElementById('total-candies').textContent = getCandies();
+  document.getElementById('best-score').textContent = bestLevel > 0 ? bestLevel : '1';
   
   // Botón start
   document.getElementById('btn-start').addEventListener('click', () => {

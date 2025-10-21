@@ -4,9 +4,10 @@
    ======================================== */
 
 import { getCandies, addCandies, getBest, setBest, saveScoreToServer } from './storage.js';
-import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js';
+import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js?v=3';
 
 const BEST_KEY = 'aray_best_pabellon';
+const BEST_LEVEL_KEY = 'aray_best_level_pabellon';
 
 // Canvas y contexto
 let canvas, ctx, dpr;
@@ -31,6 +32,7 @@ const state = {
   demons: [],
   balls: [], // Múltiples pelotas
   particles: [], // Partículas de efectos
+  backgroundParticles: [], // Partículas de fondo (chispas de fuego)
   isDragging: false,
   dragStart: { x: 0, y: 0 },
   dragCurrent: { x: 0, y: 0 },
@@ -47,8 +49,8 @@ const state = {
 const config = {
   ballSize: 35, // Pelota más grande
   demonSize: 50,
-  gravity: 0.3,
-  maxPower: 20
+  gravity: 0.2, // Menos gravedad para que vuele más
+  maxPower: 50 // Mucha más fuerza de la bola
 };
 
 // Inicializar canvas
@@ -76,6 +78,86 @@ const resizeCanvas = () => {
   ctx.scale(dpr, dpr);
 };
 
+// Crear partículas de fuego de fondo
+const createBackgroundFireParticles = (width, height) => {
+  state.backgroundParticles = [];
+  
+  // Crear múltiples partículas de fuego distribuidas por la pantalla
+  for (let i = 0; i < 25; i++) {
+    state.backgroundParticles.push({
+      x: Math.random() * width,
+      y: height + Math.random() * 100, // Empezar desde abajo
+      vx: (Math.random() - 0.5) * 2, // Movimiento horizontal suave
+      vy: -Math.random() * 3 - 1, // Movimiento hacia arriba
+      life: Math.random() * 60 + 40, // Vida variable
+      maxLife: Math.random() * 60 + 40,
+      size: Math.random() * 4 + 2, // Tamaño variable
+      color: `hsl(${Math.random() * 30 + 15}, 100%, ${Math.random() * 30 + 60}%)`, // Colores cálidos
+      alpha: Math.random() * 0.8 + 0.2
+    });
+  }
+};
+
+// Actualizar partículas de fondo
+const updateBackgroundParticles = (width, height) => {
+  for (let i = state.backgroundParticles.length - 1; i >= 0; i--) {
+    const particle = state.backgroundParticles[i];
+    
+    // Actualizar posición
+    particle.x += particle.vx;
+    particle.y += particle.vy;
+    
+    // Añadir un poco de movimiento ondulante
+    particle.vx += (Math.random() - 0.5) * 0.1;
+    particle.vy += (Math.random() - 0.5) * 0.1;
+    
+    // Reducir vida
+    particle.life--;
+    
+    // Si la partícula muere o sale de pantalla, crear una nueva
+    if (particle.life <= 0 || particle.y < -50 || particle.x < -50 || particle.x > width + 50) {
+      state.backgroundParticles[i] = {
+        x: Math.random() * width,
+        y: height + Math.random() * 50,
+        vx: (Math.random() - 0.5) * 2,
+        vy: -Math.random() * 3 - 1,
+        life: Math.random() * 60 + 40,
+        maxLife: Math.random() * 60 + 40,
+        size: Math.random() * 4 + 2,
+        color: `hsl(${Math.random() * 30 + 15}, 100%, ${Math.random() * 30 + 60}%)`,
+        alpha: Math.random() * 0.8 + 0.2
+      };
+    }
+  }
+};
+
+// Dibujar partículas de fondo
+const drawBackgroundParticles = () => {
+  for (const particle of state.backgroundParticles) {
+    const alpha = (particle.life / particle.maxLife) * particle.alpha;
+    ctx.globalAlpha = alpha;
+    
+    // Efecto de brillo
+    ctx.shadowColor = particle.color;
+    ctx.shadowBlur = particle.size * 3;
+    
+    ctx.fillStyle = particle.color;
+    ctx.beginPath();
+    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Efecto de estela
+    ctx.globalAlpha = alpha * 0.3;
+    ctx.beginPath();
+    ctx.arc(particle.x - particle.vx * 2, particle.y - particle.vy * 2, particle.size * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  
+  // Resetear efectos
+  ctx.globalAlpha = 1;
+  ctx.shadowBlur = 0;
+};
+
 // Inicializar juego
 const initGame = () => {
   const width = canvas.width / dpr;
@@ -90,7 +172,10 @@ const initGame = () => {
   state.demonDirection = 1;
   state.lastDemonMove = Date.now();
   state.demonMoveDelay = 1000;
-  state.wave = 1;
+  state.wave = 0;
+  
+  // Crear partículas de fuego de fondo
+  createBackgroundFireParticles(width, height);
   
   // Punto de lanzamiento (abajo centro)
   state.launchPoint = {
@@ -229,6 +314,8 @@ const gameLoop = () => {
           celebrateCandyEarned();
         }
         
+        // El nivel sube cuando matas a todos los demonios, no por puntos
+        
         break;
       }
     }
@@ -259,8 +346,14 @@ const gameLoop = () => {
     }
   });
   
-  // Actualizar partículas
+  // Actualizar partículas de fondo
+  updateBackgroundParticles(width, height);
+  
+  // Actualizar partículas de efectos
   updateParticles();
+  
+  // Dibujar partículas de fuego de fondo (detrás de todo)
+  drawBackgroundParticles();
   
   // Dibujar pelotas
   state.balls.forEach(ball => {
@@ -274,7 +367,7 @@ const gameLoop = () => {
     drawLauncher();
   }
   
-  // Dibujar partículas
+  // Dibujar partículas de efectos (encima de todo)
   drawParticles();
   
   animationId = requestAnimationFrame(gameLoop);
@@ -282,6 +375,11 @@ const gameLoop = () => {
 
 // Nueva oleada (progresiva)
 const spawnNewWave = (width) => {
+  // Mostrar animación de nivel ANTES de incrementar
+  if (typeof window !== 'undefined' && typeof window.showLevelUpAnimation === 'function') {
+    window.showLevelUpAnimation(state.wave + 2); // wave + 2 porque wave + 1 es el nivel actual
+  }
+  
   state.wave++;
   
   // Aumentar filas y columnas progresivamente
@@ -334,33 +432,11 @@ const createExplosionParticles = (x, y) => {
   }
 };
 
-// Dibujar demonio con efecto de brillo
+// Dibujar demonio transparente
 const drawDemon = (demon) => {
-  // Efecto de brillo pulsante
-  const glowIntensity = 0.4 + Math.sin(Date.now() * 0.008 + demon.id) * 0.3;
-  
-  // Brillo exterior más intenso
-  ctx.shadowColor = '#FF4444';
-  ctx.shadowBlur = 25 * glowIntensity;
-  
-  // Dibujar halo de brillo
-  ctx.globalAlpha = 0.6 * glowIntensity;
-  ctx.fillStyle = '#FF6666';
-  ctx.beginPath();
-  ctx.arc(
-    demon.x + demon.size/2, 
-    demon.y + demon.size/2, 
-    demon.size/2 + 8, 
-    0, 
-    Math.PI * 2
-  );
-  ctx.fill();
-  
-  // Resetear alpha
-  ctx.globalAlpha = 1;
-  
-  // Dibujar demonio
+  // Dibujar demonio directamente sin fondo rojo
   if (demon.image && demon.image.complete && demon.image.naturalWidth > 0) {
+    // Dibujar imagen del demonio sin efectos de fondo
     ctx.drawImage(
       demon.image,
       demon.x,
@@ -369,18 +445,12 @@ const drawDemon = (demon) => {
       demon.size
     );
   } else {
-    // Fallback
-    ctx.fillStyle = '#ff0000';
-    ctx.fillRect(demon.x, demon.y, demon.size, demon.size);
-    
+    // Fallback sin fondo rojo - solo emoji
     ctx.font = `${demon.size * 0.8}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('👿', demon.x + demon.size / 2, demon.y + demon.size / 2);
   }
-  
-  // Resetear sombra
-  ctx.shadowBlur = 0;
 };
 
 // Actualizar partículas
@@ -598,15 +668,15 @@ const setupControls = () => {
     const dx = state.launchPoint.x - state.dragCurrent.x;
     const dy = state.launchPoint.y - state.dragCurrent.y;
     
-    const power = Math.min(Math.hypot(dx, dy) / 8, config.maxPower);
+    const power = Math.min(Math.hypot(dx, dy) / 4, config.maxPower); // Mucho más sensible al arrastre
     const angle = Math.atan2(dy, dx);
     
-    // Lanzar pelota
+    // Lanzar pelota con más fuerza
     state.balls.push({
       x: state.launchPoint.x,
       y: state.launchPoint.y - 30,
-      vx: Math.cos(angle) * power,
-      vy: Math.sin(angle) * power
+      vx: Math.cos(angle) * power * 1.5, // Multiplicador de velocidad horizontal
+      vy: Math.sin(angle) * power * 1.5  // Multiplicador de velocidad vertical
     });
     
     state.isDragging = false;
@@ -635,38 +705,34 @@ const endGame = (reason = '👿 ¡Los demonios te alcanzaron!') => {
   
   const bestScore = getBest(BEST_KEY);
   const isNewRecord = state.score > bestScore;
+  const bestLevel = getBest(BEST_LEVEL_KEY) || 1;
+  const isNewLevelRecord = (state.wave + 1) > bestLevel;
+  
+  // El nivel se basa en las waves completadas, no en puntos
   
   if (isNewRecord) {
     setBest(BEST_KEY, state.score);
     saveScoreToServer('pabellon', state.score, { score: state.score, candies: getCandies() });
   }
   
+  if (isNewLevelRecord) {
+    localStorage.setItem(BEST_LEVEL_KEY, (state.wave + 1).toString());
+  }
+  
   const overlay = document.getElementById('game-overlay');
   const content = overlay.querySelector('.game-overlay-content');
   
   content.innerHTML = `
-    <h2>${reason}</h2>
-    <div class="game-stats">
-      <div class="stat-line">
-        <span>Demonios eliminados:</span>
-        <strong>${Math.floor(state.score / 10)}</strong>
-      </div>
-      <div class="stat-line">
-        <span>Puntuación:</span>
-        <strong>${state.score}</strong>
-      </div>
-      <div class="stat-line">
-        <span>Mejor puntuación:</span>
-        <strong>${Math.max(state.score, bestScore)}</strong>
-      </div>
-      <div class="stat-line">
-        <span>Golosinas ganadas:</span>
-        <strong>${Math.floor(state.score / 100)}</strong>
+    <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem;">${reason}</h2>
+    <div class="game-stats" style="display: flex; justify-content: center; margin: 0.8rem 0;">
+      <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 120px;">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">NIVEL</div>
+        <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.wave + 1}</div>
+        <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.wave + 1, parseInt(localStorage.getItem('aray_best_level_pabellon')) || 1)}</div>
       </div>
     </div>
-    ${isNewRecord ? '<p style="font-size: 1.5rem; margin: 1rem 0;">🏆 ¡NUEVO RÉCORD! 🏆</p>' : ''}
-    <div style="display: flex; justify-content: center; margin-top: 16px;">
-      <button class="btn btn-primary" id="btn-restart">Reintentar</button>
+    <div style="display: flex; justify-content: center; margin-top: 0.8rem;">
+      <button class="btn btn-primary" id="btn-restart" style="padding: 0.6rem 1.2rem; font-size: 1rem;">Reintentar</button>
     </div>
   `;
   
@@ -684,12 +750,10 @@ const endGame = (reason = '👿 ¡Los demonios te alcanzaron!') => {
 
 // Actualizar HUD
 const updateGameHUD = () => {
-  const waveEl = document.getElementById('hud-wave');
   const scoreEl = document.getElementById('hud-score');
   const candiesEl = document.getElementById('hud-candies');
   
-  if (waveEl) waveEl.textContent = state.wave;
-  if (scoreEl) scoreEl.textContent = state.score;
+  if (scoreEl) scoreEl.textContent = `Nivel ${state.wave + 1}`;
   if (candiesEl) candiesEl.textContent = getCandies();
 };
 
@@ -700,9 +764,11 @@ document.addEventListener('DOMContentLoaded', () => {
   initCommonUI();
   initCanvas();
   
-  const bestScore = getBest(BEST_KEY);
-  document.getElementById('best-score').textContent = bestScore;
-  document.getElementById('total-candies').textContent = getCandies();
+  const bestLevel = getBest(BEST_LEVEL_KEY) || 1;
+  const bestLevelEl = document.getElementById('best-level');
+  if (bestLevelEl) {
+    bestLevelEl.textContent = bestLevel;
+  }
   
   document.getElementById('btn-start').addEventListener('click', () => {
     const overlay = document.getElementById('game-overlay');

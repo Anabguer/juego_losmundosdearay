@@ -4,9 +4,10 @@
    ======================================== */
 
 import { getCandies, addCandies, getBest, setBest, saveScoreToServer } from './storage.js';
-import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js';
+import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js?v=3';
 
 const BEST_KEY = 'aray_best_edificio';
+const BEST_LEVEL_KEY = 'aray_best_level_edificio';
 
 // Canvas y contexto
 let canvas, ctx, dpr;
@@ -31,6 +32,7 @@ for (let i = 1; i <= 4; i++) {
 const state = {
   gameOver: false,
   score: 0,
+  level: 1,
   player: {
     x: 0,
     y: 0,
@@ -97,6 +99,7 @@ const initGame = () => {
   
   state.gameOver = false;
   state.score = 0;
+  state.level = 1;
   state.cameraY = 0;
   state.platforms = [];
   state.enemies = [];
@@ -227,39 +230,30 @@ const gameLoop = () => {
   // Limpiar
   ctx.clearRect(0, 0, width, height);
   
-  // Fondo: cuarto abajo, luego cielo
-  const roomHeight = 800; // Altura del cuarto
+  // Fondo: edificio en la primera pantalla, luego cielo con degradados
+  const roomHeight = height; // Altura del cuarto = altura de pantalla
   const roomBottomY = -state.cameraY; // Posición del cuarto en pantalla
   
-  if (roomBottomY > -roomHeight && roomBottomY < height) {
-    // Dibujar cuarto (edificio.png)
+  // Si estamos en la primera pantalla (cameraY < height), mostrar solo edificio
+  if (state.cameraY < height) {
+    // Dibujar cuarto (edificio.png) que llena toda la pantalla
     if (roomImage.complete && roomImage.naturalWidth > 0) {
-      const roomY = Math.max(0, roomBottomY);
-      const roomDrawHeight = Math.min(roomHeight, height - roomY);
-      const sourceY = roomBottomY < 0 ? -roomBottomY : 0;
-      
       ctx.drawImage(
         roomImage,
-        0, sourceY, // source x, y
-        roomImage.naturalWidth, roomDrawHeight, // source width, height
-        0, roomY, // dest x, y
-        width, roomDrawHeight // dest width, height
+        0, 0, // source x, y
+        roomImage.naturalWidth, roomImage.naturalHeight, // source width, height
+        0, 0, // dest x, y
+        width, height // dest width, height
       );
     } else {
       // Fallback: cuarto oscuro
       ctx.fillStyle = '#3a2f5f';
-      ctx.fillRect(0, Math.max(0, roomBottomY), width, roomHeight);
+      ctx.fillRect(0, 0, width, height);
     }
-  }
-  
-  // Fondo del cielo con gradiente según altura
-  const skyTop = roomBottomY - roomHeight;
-  if (skyTop < height) {
-    const skyY = Math.max(0, skyTop);
-    const skyHeight = height - skyY;
-    
-    const skyProgress = Math.min(state.cameraY / 2000, 1);
-    const gradient = ctx.createLinearGradient(0, skyY, 0, skyY + skyHeight);
+  } else {
+    // Cuando salimos del edificio, mostrar cielo con degradados
+    const skyProgress = Math.min((state.cameraY - height) / 2000, 1);
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
     
     if (skyProgress < 0.3) {
       // Cielo diurno
@@ -278,7 +272,7 @@ const gameLoop = () => {
     }
     
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, skyY, width, skyHeight);
+    ctx.fillRect(0, 0, width, height);
   }
   
   // Física del jugador
@@ -441,6 +435,19 @@ const gameLoop = () => {
     state.lastCandyScore = state.score;
     addCandies(1);
     celebrateCandyEarned();
+  }
+  
+  // Nivel cada 500 metros
+  const newLevel = Math.max(1, Math.floor(state.score / 500) + 1);
+  if (newLevel > state.level) {
+    state.level = newLevel;
+    // Aumentar dificultad: más enemigos y plataformas más separadas
+    config.platformGap = Math.max(150, 180 - state.level * 5);
+    addCandies(1);
+    celebrateCandyEarned();
+    if (typeof window !== 'undefined' && typeof window.showLevelUpAnimation === 'function') {
+      window.showLevelUpAnimation(state.level);
+    }
   }
   
   // Dibujar nubes
@@ -675,34 +682,32 @@ const endGame = (reason = '💥 ¡Caíste!') => {
   
   const bestScore = getBest(BEST_KEY);
   const isNewRecord = state.score > bestScore;
+  const bestLevel = getBest(BEST_LEVEL_KEY) || 1;
+  const isNewLevelRecord = state.level > bestLevel;
   
   if (isNewRecord) {
     setBest(BEST_KEY, state.score);
     saveScoreToServer('edificio', state.score, { score: state.score, candies: getCandies() });
   }
   
+  if (isNewLevelRecord) {
+    localStorage.setItem(BEST_LEVEL_KEY, state.level.toString());
+  }
+  
   const overlay = document.getElementById('game-overlay');
   const content = overlay.querySelector('.game-overlay-content');
   
   content.innerHTML = `
-    <h2>${reason}</h2>
-    <div class="game-stats">
-      <div class="stat-line">
-        <span>Altura alcanzada:</span>
-        <strong>${state.score}<span style="color: #d900ff;">m</span></strong>
-      </div>
-      <div class="stat-line">
-        <span>Mejor altura:</span>
-        <strong>${Math.max(state.score, bestScore)}<span style="color: #d900ff;">m</span></strong>
-      </div>
-      <div class="stat-line">
-        <span>Golosinas ganadas:</span>
-        <strong>${Math.floor(state.score / 100)}</strong>
+    <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem;">${reason}</h2>
+    <div class="game-stats" style="display: flex; justify-content: center; margin: 0.8rem 0;">
+      <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 120px;">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">NIVEL</div>
+        <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.level}</div>
+        <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.level, parseInt(localStorage.getItem('aray_best_level_edificio')) || 1)}</div>
       </div>
     </div>
-    ${isNewRecord ? '<p style="font-size: 1.5rem; margin: 1rem 0;">🏆 ¡NUEVO RÉCORD! 🏆</p>' : ''}
-    <div style="display: flex; justify-content: center; margin-top: 16px;">
-      <button class="btn btn-primary" id="btn-restart">Reintentar</button>
+    <div style="display: flex; justify-content: center; margin-top: 0.8rem;">
+      <button class="btn btn-primary" id="btn-restart" style="padding: 0.6rem 1.2rem; font-size: 1rem;">Reintentar</button>
     </div>
   `;
   
@@ -720,10 +725,10 @@ const endGame = (reason = '💥 ¡Caíste!') => {
 
 // Actualizar HUD
 const updateGameHUD = () => {
-  const heightEl = document.getElementById('hud-height');
+  const scoreEl = document.getElementById('hud-score');
   const candiesEl = document.getElementById('hud-candies');
   
-  if (heightEl) heightEl.textContent = state.score;
+  if (scoreEl) scoreEl.textContent = `Nivel ${state.level}`;
   if (candiesEl) candiesEl.textContent = getCandies();
 };
 
@@ -734,9 +739,11 @@ document.addEventListener('DOMContentLoaded', () => {
   initCommonUI();
   initCanvas();
   
-  const bestScore = getBest(BEST_KEY);
-  document.getElementById('best-height').textContent = bestScore;
-  document.getElementById('total-candies').textContent = getCandies();
+  const bestLevel = getBest(BEST_LEVEL_KEY) || 1;
+  const bestLevelEl = document.getElementById('best-level');
+  if (bestLevelEl) {
+    bestLevelEl.textContent = bestLevel;
+  }
   
   document.getElementById('btn-start').addEventListener('click', () => {
     document.getElementById('game-overlay').classList.add('hidden');

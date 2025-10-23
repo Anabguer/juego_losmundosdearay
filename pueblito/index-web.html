@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base href="./">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no">
+  <meta name="theme-color" content="#0e1320">
+  <meta name="description" content="Los Mundos de Aray - Explora el pueblo navegable">
+  <link rel="icon" href="assets/img/logo.png">
+  <title>🌟 Los Mundos de Aray</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  
+  <!-- Header / HUD -->
+  <header class="game-header">
+    <img src="assets/img/logo.png" alt="Aray" class="game-logo">
+    <div class="hud-stats">
+      <div class="stat-item candy-pill">
+        <span class="stat-icon">🍬</span>
+        <span class="stat-value" id="hud-coins">0</span>
+      </div>
+      
+      <div class="stat-item hunger-stat hunger-bar-container">
+        <span class="stat-icon">🍪</span>
+        <div class="hunger-bar">
+          <div class="hunger-bar-fill" id="hunger-bar-fill"></div>
+        </div>
+      </div>
+      
+      <button class="btn-eat" id="btn-eat">
+        <img src="assets/img/comida.png" alt="Comer" class="btn-eat-icon">
+      </button>
+    </div>
+  </header>
+  
+  <!-- Mapa del pueblo -->
+  <main class="map-container">
+    <div class="map-wrapper">
+      <div id="map" class="map">
+        <!-- Los tiles se generarán dinámicamente -->
+      </div>
+      
+      <!-- Avatar de Aray DENTRO del wrapper -->
+      <div id="avatar" class="avatar"></div>
+    </div>
+  </main>
+  
+  <!-- Scripts -->
+  <script type="module">
+    console.log('🌐 Cargando versión WEB de Los Mundos de Aray...');
+    
+    // Importar módulos básicos
+    import { initMap } from './js/map.js';
+    import { getCoins, getEnergy } from './js/storage.js';
+    import { updateHUD, initCommonUI } from './js/ui.js?v=3';
+    
+    // Cargar Firebase y sistemas de autenticación
+    console.log('🔥 Cargando Firebase Web...');
+    import('./js/firebase-web.js?v=1').then(() => {
+      console.log('✅ Firebase Web cargado');
+      
+      import('./js/auth-system-web.js?v=1').then(() => {
+        console.log('✅ Auth System Web cargado');
+        
+        import('./js/candies-system-web.js?v=1').then(candiesModule => {
+          console.log('✅ Candies System Web cargado');
+          candiesModule.syncLocalCandies();
+        });
+        
+        import('./js/progress-system-web.js?v=1').then(progressModule => {
+          console.log('✅ Progress System Web cargado');
+          progressModule.syncLocalProgress();
+        });
+        
+        import('./js/ui-auth-web.js?v=1').then(() => {
+          console.log('✅ UI Auth Web cargado');
+        });
+        
+        import('./js/testing-web.js?v=1').then(() => {
+          console.log('✅ Testing Web cargado');
+        });
+      });
+    }).catch(error => {
+      console.error('❌ Error cargando Firebase Web:', error);
+    });
+    
+    // Inicializar cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('🚀 Inicializando aplicación...');
+      initCommonUI();
+      
+      // Inicializar auth UI después de un pequeño delay
+      setTimeout(() => {
+        if (window.initAuthUI) {
+          window.initAuthUI();
+        }
+        updateHUD();
+        initMap();
+      }, 1000);
+    });
+  </script>
+</body>
+</html>
+
+
+
+
+

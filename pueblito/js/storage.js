@@ -1,11 +1,7 @@
 /* ========================================
-   💾 STORAGE - Gestión de localStorage + Firebase
-   Sistema híbrido: local + Firebase para autenticados
+   💾 STORAGE - Gestión de localStorage + GameBridge
+   Sistema híbrido: local + Android GameBridge
    ======================================== */
-
-import { addCandies as addCandiesFirebase, getTotalCandies } from './candies-system.js';
-import { updateBestLevel, getBestLevel } from './progress-system.js';
-import { getCurrentUser } from './auth-system.js';
 
 // Claves de localStorage
 const KEYS = {
@@ -24,13 +20,11 @@ export const setCoins = (n) => {
 };
 
 export const addCoins = async (n = 1) => {
-  const user = getCurrentUser();
-  
-  if (user) {
-    // Usuario autenticado - usar Firebase
-    await addCandiesFirebase(n);
+  if (window.GameBridge) {
+    // Android - usar GameBridge
+    window.GameBridge.addCandies(n);
   } else {
-    // Usuario no autenticado - usar localStorage
+    // Web - usar localStorage
     setCoins(getCoins() + n);
   }
   
@@ -40,8 +34,14 @@ export const addCoins = async (n = 1) => {
 
 // Alias para compatibilidad
 export const getCandies = () => {
-  const user = getCurrentUser();
-  return user ? getTotalCandies() : getCoins();
+  if (window.GameBridge) {
+    // Android - obtener del GameBridge
+    const user = JSON.parse(window.GameBridge.getUser() || '{}');
+    return user.candiesTotal || 0;
+  } else {
+    // Web - usar localStorage
+    return getCoins();
+  }
 };
 export const setCandies = setCoins;
 export const addCandies = addCoins;
@@ -59,33 +59,29 @@ export const addEnergy = (n) => {
 
 // ========== RÉCORDS ==========
 export const getBest = async (key) => {
-  const user = getCurrentUser();
-  
-  if (user) {
-    // Usuario autenticado - usar Firebase
-    const gameId = key.replace('aray_best_', '');
-    return await getBestLevel(gameId);
+  if (window.GameBridge) {
+    // Android - usar GameBridge (por ahora localStorage hasta implementar getBestLevel)
+    return parseInt(localStorage.getItem(key) || '0', 10);
   } else {
-    // Usuario no autenticado - usar localStorage
+    // Web - usar localStorage
     return parseInt(localStorage.getItem(key) || '0', 10);
   }
 };
 
 export const setBest = async (key, val) => {
-  const user = getCurrentUser();
-  
-  if (user) {
-    // Usuario autenticado - usar Firebase
+  if (window.GameBridge) {
+    // Android - usar GameBridge
     const gameId = key.replace('aray_best_', '');
-    const current = await getBestLevel(gameId);
+    const current = parseInt(localStorage.getItem(key) || '0', 10);
     
     if (val > current) {
-      await updateBestLevel(gameId, val);
+      window.GameBridge.updateBestLevel(gameId, val);
+      localStorage.setItem(key, String(val)); // Cache local
       return true; // Nuevo récord
     }
     return false;
   } else {
-    // Usuario no autenticado - usar localStorage
+    // Web - usar localStorage
     const current = parseInt(localStorage.getItem(key) || '0', 10);
     if (val > current) {
       localStorage.setItem(key, String(val));

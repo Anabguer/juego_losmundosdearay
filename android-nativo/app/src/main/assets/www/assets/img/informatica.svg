@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">
+  <rect width="400" height="300" fill="#e3f2fd"/>
+  <rect x="80" y="60" width="240" height="180" fill="#2196f3" opacity="0.2" rx="10"/>
+  <text x="50%" y="45%" font-size="100" text-anchor="middle" dy=".3em">💻</text>
+  <text x="50%" y="85%" font-size="28" text-anchor="middle" fill="#1565c0" font-weight="bold">INFORMÁTICA</text>
+</svg>

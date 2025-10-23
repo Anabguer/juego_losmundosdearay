@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Los Mundos de Aray</title>
+    <link rel="stylesheet" href="assets/styles.css?v=3">
+</head>
+<body>
+  
+  <!-- Header / HUD -->
+  <header class="game-header">
+    <img src="assets/img/logo.png" alt="Aray" class="game-logo">
+    <div class="hud-stats">
+      <div class="stat-item candy-pill">
+        <span class="stat-icon">🍬</span>
+        <span class="stat-value" id="hud-coins">0</span>
+      </div>
+      
+      <div class="stat-item hunger-stat hunger-bar-container">
+        <span class="stat-icon">🍪</span>
+        <div class="hunger-bar">
+          <div class="hunger-bar-fill" id="hunger-bar-fill"></div>
+        </div>
+      </div>
+      
+      <button class="btn-eat" id="btn-eat">
+        <img src="assets/img/comida.png" alt="Comer" class="btn-eat-icon">
+      </button>
+      
+      <button id="login-btn" class="login-btn">🔐 Entrar</button>
+    </div>
+  </header>
+  
+  <!-- Mapa del pueblo -->
+  <main class="map-container">
+    <div class="map-wrapper">
+      <div id="map" class="map">
+        <!-- Los tiles se generarán dinámicamente -->
+      </div>
+      
+      <!-- Avatar de Aray DENTRO del wrapper -->
+      <div id="avatar" class="avatar"></div>
+    </div>
+  </main>
+
+  <!-- Modales -->
+  <div id="login-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h2>Iniciar Sesión</h2>
+      <p>Inicia sesión con Google para guardar tu progreso y competir en el ranking global.</p>
+      <button id="google-login-btn" class="google-btn">Entrar con Google</button>
+      <button id="close-login-modal" class="close-btn">Cerrar</button>
+    </div>
+  </div>
+
+  <div id="nick-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h2>Configurar Nick</h2>
+      <p>Elige un nombre único para aparecer en el ranking:</p>
+      <input type="text" id="nick-input" placeholder="Tu nick" maxlength="20">
+      <button id="save-nick-btn" class="save-btn">Guardar</button>
+    </div>
+  </div>
+
+  <div id="ranking-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <h2>🏆 Ranking Global</h2>
+      <div id="ranking-list"></div>
+      <button id="close-ranking-modal" class="close-btn">Cerrar</button>
+    </div>
+  </div>
+  
+  <!-- Scripts básicos -->
+  <script src="js/storage.js?v=3"></script>
+  <script src="js/ui.js?v=3"></script>
+  <script src="js/map.js?v=3"></script>
+  
+  <!-- Scripts de autenticación -->
+  <script src="js/firebase-config.js?v=3"></script>
+  <script src="js/auth-system.js?v=3"></script>
+  <script src="js/candies-system.js?v=3"></script>
+  <script src="js/progress-system.js?v=3"></script>
+  <script src="js/ui-auth.js?v=3"></script>
+  <script src="js/testing.js?v=3"></script>
+  
+  <script>
+    // Inicializar cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('🚀 Inicializando juego...');
+      
+      // Inicializar UI común
+      if (typeof initCommonUI === 'function') {
+        initCommonUI();
+      }
+      
+      // Inicializar sistema de autenticación
+      if (typeof initAuthUI === 'function') {
+        initAuthUI();
+      }
+      
+      // Actualizar HUD
+      if (typeof updateHUD === 'function') {
+        updateHUD();
+      }
+      
+      // Inicializar mapa
+      if (typeof initMap === 'function') {
+        initMap();
+      }
+      
+      // Sincronizar datos locales si hay usuario autenticado
+      setTimeout(() => {
+        if (typeof syncLocalCandies === 'function') {
+          syncLocalCandies();
+        }
+        if (typeof syncLocalProgress === 'function') {
+          syncLocalProgress();
+        }
+      }, 2000);
+      
+      console.log('✅ Juego inicializado correctamente');
+    });
+  </script>
+  
+</body>
+</html>
+

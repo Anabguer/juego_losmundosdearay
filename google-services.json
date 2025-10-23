@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "439019722673",
+    "project_id": "intocables13",
+    "storage_bucket": "intocables13.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:439019722673:android:5a78cc103d7c93198c0f90",
+        "android_client_info": {
+          "package_name": "com.intocables.losmundosdearay"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZ88_2qctO684sgo28uPWFLYgWqZ5qIHk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

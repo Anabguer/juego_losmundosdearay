@@ -17,4 +17,22 @@ Thumbs.db
 *.tmp
 *.temp
 
+# Android build files
+*.apk
+*.aab
+android-nativo/app/build/
+android-nativo/build/
+pueblito/android/build/
+pueblito/android/app/build/
+
+# Android generated files
+android-nativo/app/src/main/assets/
+android-nativo/app/build/intermediates/
+android-nativo/app/build/outputs/
+
+# Logcat files
+*.logcat
+
+# Screenshots
+Captura de pantalla*.png
 

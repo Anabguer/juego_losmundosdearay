@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Los Mundos de Aray</string>
+    <string name="login">Entrar</string>
+    <string name="ranking">Ranking</string>
+    <string name="nick_setup">Configurar Nick</string>
+    <string name="google_signin">Entrar con Google</string>
+    <string name="nick_hint">Tu nick</string>
+    <string name="save_nick">Guardar</string>
+    <string name="nick_in_use">Nick en uso</string>
+    <string name="nick_saved">Nick guardado</string>
+    <string name="close">Cerrar</string>
+    <string name="default_web_client_id">439019722673-oaibju1ssbvnbnvvgbvj3ibetu68tsv2.apps.googleusercontent.com</string>
+</resources>

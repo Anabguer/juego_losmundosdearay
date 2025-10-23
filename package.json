@@ -1,0 +1,25 @@
+{
+  "name": "los-mundos-de-aray",
+  "version": "1.0.0",
+  "description": "Juego web Los Mundos de Aray con Capacitor",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'Build completed'",
+    "dev": "npx http-server pueblito -p 8000 -o",
+    "android": "npx cap run android",
+    "sync": "npx cap sync",
+    "copy": "npx cap copy"
+  },
+  "dependencies": {
+    "@capacitor/core": "^5.5.1",
+    "@capacitor/android": "^5.5.1",
+    "@codetrix-studio/capacitor-google-auth": "^3.0.2",
+    "firebase": "^10.7.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^5.5.1"
+  },
+  "keywords": ["game", "capacitor", "android", "firebase"],
+  "author": "Intocables",
+  "license": "MIT"
+}

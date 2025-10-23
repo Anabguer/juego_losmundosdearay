@@ -555,6 +555,9 @@ button#modal-x.btn.btn-outline {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .map-wrapper {
@@ -562,6 +565,10 @@ button#modal-x.btn.btn-outline {
   width: min(1000px, 94vw);
   height: calc(100dvh - 170px); /* Más espacio para el header */
   margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .map {
@@ -581,6 +588,11 @@ button#modal-x.btn.btn-outline {
   overflow: hidden; /* Evitar que las esquinas se salgan */
   direction: ltr;
   grid-auto-flow: row;
+  margin: 0 auto;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  height: 100%;
 }
 
 .tile {
@@ -1784,6 +1796,48 @@ canvas {
    📱 RESPONSIVE
    ======================================== */
 
+/* Mejoras generales para responsividad */
+.btn {
+  word-wrap: break-word;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Orientación landscape en móviles */
+@media (max-height: 500px) and (orientation: landscape) {
+  .game-header {
+    top: 10px;
+    padding: 4px 8px;
+  }
+  
+  .game-logo {
+    height: 60px !important;
+    max-width: 150px !important;
+  }
+  
+  .hud-stats {
+    gap: 4px;
+  }
+  
+  .btn {
+    min-width: 100px !important;
+    padding: 0.4rem 0.6rem !important;
+    font-size: 0.8rem !important;
+  }
+  
+  .map-container {
+    padding-top: 70px !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  
+  .map-wrapper {
+    width: min(600px, 90vw) !important;
+    height: calc(100dvh - 120px) !important;
+  }
+}
+
 /* Tablets grandes y escritorio pequeño */
 @media (min-width: 768px) and (max-width: 1024px) {
   .game-header {
@@ -1815,6 +1869,12 @@ canvas {
   .map-container {
     max-width: 700px;
     margin: 0 auto;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  
+  .map-wrapper {
+    width: min(700px, 90vw);
   }
   
   /* Modales más grandes en tablets */
@@ -1845,10 +1905,21 @@ canvas {
   .btn {
     padding: 0.6rem 1rem;
     font-size: 0.9rem;
+    min-width: 150px !important; /* Reducir ancho mínimo en móviles */
   }
   
   .modal-content {
     padding: var(--gap-md);
+  }
+  
+  /* Botones específicos más pequeños en móviles */
+  button#btn-start.btn.btn-primary,
+  .btn.btn-primary#btn-start,
+  button#btn-restart.btn.btn-primary,
+  .btn.btn-primary#btn-restart {
+    min-width: 150px !important;
+    padding: 1rem 1.5rem !important;
+    font-size: 1.5rem !important;
   }
 }
 
@@ -1903,6 +1974,28 @@ canvas {
   
   .map-container {
     padding-top: 85px !important; /* Ajustar espacio superior */
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  
+  .map-wrapper {
+    width: min(350px, 95vw) !important;
+  }
+  
+  /* Botones aún más pequeños en móviles estrechos */
+  .btn {
+    min-width: 120px !important;
+    padding: 0.5rem 0.8rem !important;
+    font-size: 0.8rem !important;
+  }
+  
+  button#btn-start.btn.btn-primary,
+  .btn.btn-primary#btn-start,
+  button#btn-restart.btn.btn-primary,
+  .btn.btn-primary#btn-restart {
+    min-width: 120px !important;
+    padding: 0.8rem 1.2rem !important;
+    font-size: 1.2rem !important;
   }
 }
 
@@ -2008,6 +2101,15 @@ canvas {
   .btn-eat-icon {
     width: 16px !important;
     height: 16px !important;
+  }
+  
+  .map-container {
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+  }
+  
+  .map-wrapper {
+    width: min(320px, 98vw) !important;
   }
 }
 

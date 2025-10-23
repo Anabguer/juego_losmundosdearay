@@ -3,7 +3,7 @@
 <head>
   <base href="./">
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no">
   <meta name="theme-color" content="#0e1320">
   <meta name="description" content="Los Mundos de Aray - Explora el pueblo navegable">
   <link rel="icon" href="assets/img/logo.png">
@@ -48,25 +48,23 @@
   
   <!-- Scripts -->
   <script type="module">
-    import { initMap } from './js/map.js';
-    import { getCoins, getEnergy } from './js/storage.js';
-    import { updateHUD, initCommonUI } from './js/ui.js?v=3';
-    import { initAuthUI } from './js/ui-auth.js';
-    import { syncLocalCandies, syncLocalProgress } from './js/candies-system.js';
-    import './js/testing.js'; // Funciones de testing
+        import { initMap } from './js/map.js';
+        import { getCoins, getEnergy } from './js/storage.js';
+        import { updateHUD, initCommonUI } from './js/ui.js?v=4';
     
     // Inicializar cuando el DOM esté listo
     document.addEventListener('DOMContentLoaded', () => {
       initCommonUI();
-      initAuthUI(); // Inicializar sistema de autenticación
       updateHUD();
       initMap();
       
-      // Sincronizar datos locales si hay usuario autenticado
-      setTimeout(() => {
-        syncLocalCandies();
-        syncLocalProgress();
-      }, 2000);
+      // Detectar si estamos en Android (GameBridge disponible)
+      if (window.GameBridge) {
+        console.log('📱 Android detectado - GameBridge disponible');
+        // El bridge se encarga de la autenticación
+      } else {
+        console.log('🌐 Web detectado - modo offline');
+      }
     });
   </script>
   

@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Reglas para usuarios
+    match /apps/{appId}/users/{uid} {
+      allow read: if true;
+      allow create, update: if request.auth != null 
+        && request.auth.uid == uid
+        && (!('candiesTotal' in request.resource.data)
+            || !('candiesTotal' in resource.data)
+            || request.resource.data.candiesTotal >= resource.data.candiesTotal);
+      allow delete: if false;
+    }
+    
+    // Reglas para progreso (subcolección de usuarios)
+    match /apps/{appId}/users/{uid}/progress/{gameId} {
+      allow read: if true;
+      allow create, update: if request.auth != null 
+        && request.auth.uid == uid
+        && (!('bestLevel' in request.resource.data)
+            || !('bestLevel' in resource.data)
+            || request.resource.data.bestLevel >= resource.data.bestLevel);
+      allow delete: if false;
+    }
+    
+    // Reglas para nicks
+    match /apps/{appId}/nicks/{lowerNick} {
+      allow read: if true;
+      allow create: if request.auth != null 
+        && request.auth.uid == resource.data.uid;
+      allow update, delete: if false;
+    }
+    
+    // Reglas para progreso (colección separada - DEPRECATED)
+    match /apps/{appId}/progress/{progressId} {
+      allow read: if true;
+      allow create, update: if request.auth != null 
+        && request.auth.uid == resource.data.uid
+        && (!('bestLevel' in request.resource.data)
+            || !('bestLevel' in resource.data)
+            || request.resource.data.bestLevel >= resource.data.bestLevel);
+      allow delete: if false;
+    }
+  }
+}
+
+

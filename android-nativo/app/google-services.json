@@ -1,0 +1,57 @@
+{
+  "project_info": {
+    "project_number": "439019722673",
+    "project_id": "intocables13",
+    "storage_bucket": "intocables13.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:439019722673:android:5a78cc103d7c93198c0f90",
+        "android_client_info": {
+          "package_name": "com.intocables.losmundosdearay"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "439019722673-5hh2hf83mf336fcpru8m2i9i9ooh2j33.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.intocables.losmundosdearay",
+            "certificate_hash": "e15aa48c0f935642186ea067bf1745484d7b1fad"
+          }
+        },
+        {
+          "client_id": "439019722673-o37uf5p0jsunsenqmpfecjas3a585vlj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.intocables.losmundosdearay",
+            "certificate_hash": "e2d496995e6636b2b1fccd848e37fcb42b3e636f"
+          }
+        },
+        {
+          "client_id": "439019722673-oaibju1ssbvnbnvvgbvj3ibetu68tsv2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZ88_2qctO684sgo28uPWFLYgWqZ5qIHk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "439019722673-oaibju1ssbvnbnvvgbvj3ibetu68tsv2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
+
+

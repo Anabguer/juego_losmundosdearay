@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">
-  <rect width="400" height="300" fill="#f8e8f8"/>
-  <circle cx="200" cy="150" r="100" fill="#ff4fd8" opacity="0.3"/>
-  <text x="50%" y="45%" font-size="100" text-anchor="middle" dy=".3em">🏀</text>
-  <text x="50%" y="85%" font-size="28" text-anchor="middle" fill="#cc00aa" font-weight="bold">PABELLÓN</text>
-</svg>

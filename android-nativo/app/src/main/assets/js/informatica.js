@@ -4,9 +4,9 @@
    ======================================== */
 
 import { getCandies, addCandies, getBest, setBest, saveScoreToServer } from './storage.js';
-import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js?v=3';
+import { initCommonUI, updateHUD, toast, playSound, playAudioFile, vibrate, celebrateCandyEarned } from './ui.js';
 
-const BEST_KEY = 'aray_best_informatica';
+const BEST_KEY = 'informatica';
 
 // Canvas y contexto
 let canvas, ctx, dpr;
@@ -49,6 +49,11 @@ const config = {
 
 // ====== Init ======
 const initGame = () => {
+  // Limpiar animación de nivel si existe
+  if (typeof window !== 'undefined' && typeof window.hideLevelUpAnimation === 'function') {
+    window.hideLevelUpAnimation();
+  }
+  
   state.connected = 0;
   state.level = 1;
   state.ports = [];
@@ -531,10 +536,8 @@ const onPointerUp = (e) => {
       }
     }
     
-    // Sonido de conexión correcta
-    const audioCorrect = new Audio('assets/audio/conectado.mp3');
-    audioCorrect.volume = 0.5;
-    audioCorrect.play().catch(e => console.log('Audio no disponible'));
+    // Sonido de conexión correcta (ruta unificada)
+    playAudioFile('audio/conectado.mp3', 0.5);
     
     vibrate(50);
     // toast(`✅ ${port1.name} conectado!`); // Removido
@@ -553,10 +556,8 @@ const onPointerUp = (e) => {
     updateGameHUD();
     
   } else if (targetPort && targetPort !== state.draggedPort) {
-    // Incorrecto - vibración y sonido de error
-    const audioError = new Audio('assets/audio/errorconectado.mp3');
-    audioError.volume = 0.5;
-    audioError.play().catch(e => console.log('Audio no disponible'));
+    // Incorrecto - vibración y sonido de error (ruta unificada)
+    playAudioFile('audio/errorconectado.mp3', 0.5);
     
     vibrate([100, 50, 100]);
     // toast('❌ Tipo incorrecto'); // Removido
@@ -568,23 +569,21 @@ const onPointerUp = (e) => {
 // Ya no necesitamos subir de nivel
 
 // End game
-const endGame = () => {
+const endGame = async () => {
   state.gameOver = true;
   cancelAnimationFrame(animationId);
   
   // Sonido de perder
-  const audio = new Audio('assets/audio/perder.mp3');
-  audio.volume = 0.5;
-  audio.play().catch(e => console.log('Audio no disponible'));
+  playAudioFile('audio/perder.mp3', 0.5);
   
   vibrate([200, 100, 200]);
   
-  const bestScore = getBest(BEST_KEY);
-  const isNewRecord = state.connected > bestScore;
+  const bestLevel = await getBest('informatica');
+  const isNewRecord = state.level > bestLevel;
   
   if (isNewRecord) {
-    setBest(BEST_KEY, state.level); // Guardar NIVEL, no connected
-    saveScoreToServer('informatica', state.connected, { connected: state.connected, candies: getCandies() });
+    await setBest('informatica', state.level); // Guardar NIVEL
+    saveScoreToServer('informatica', state.level, { level: state.level, connected: state.connected, candies: getCandies() });
   }
   
   const overlay = document.getElementById('game-overlay');
@@ -596,12 +595,12 @@ const endGame = () => {
       <div class="stat-card" style="background: linear-gradient(135deg, #ff6b9d, #c44569); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(255, 107, 157, 0.3);">
         <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">CONEXIONES</div>
         <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.connected}</div>
-        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.connected, bestScore)}</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Conexiones completadas</div>
       </div>
       <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3);">
         <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">NIVEL</div>
         <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.level}</div>
-        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.level, parseInt(localStorage.getItem('aray_best_level_informatica')) || 1)}</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.level, bestLevel)}</div>
       </div>
     </div>
     <div style="display: flex; justify-content: center; margin-top: 0.8rem;">
@@ -609,9 +608,21 @@ const endGame = () => {
     </div>
   `;
   
+  // Forzar estilos inline para que tenga fondo pero NO tape el header
+  const headerHeight = 60; // Altura fija del header
+  
+  overlay.style.position = 'absolute';
+  overlay.style.inset = `${headerHeight}px 0px 0px`;
+  overlay.style.width = '100%';
+  overlay.style.height = `calc(100% - ${headerHeight}px)`;
+  overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.75)';
+  overlay.style.display = 'flex';
+  overlay.style.alignItems = 'center';
+  overlay.style.justifyContent = 'center';
+  overlay.style.zIndex = '999'; // Menor que el header (1000)
+  
   overlay.classList.add('active');
   overlay.classList.remove('hidden');
-  overlay.style.display = 'flex';
   
   document.getElementById('btn-restart').addEventListener('click', () => {
     overlay.classList.remove('active');
@@ -637,23 +648,9 @@ window.updateHUD = updateGameHUD;
 document.addEventListener('DOMContentLoaded', () => {
   initCommonUI();
   
-  const bestScore = getBest(BEST_KEY);
-  
-  // Solo actualizar elementos que existen
-  const bestLevelEl = document.getElementById('best-level');
-  const totalCandiesEl = document.getElementById('total-candies');
-  
-  if (bestLevelEl) {
-    bestLevelEl.textContent = bestScore;
-  }
-  if (totalCandiesEl) {
-    totalCandiesEl.textContent = getCandies();
-  }
-  
-  document.getElementById('btn-start').addEventListener('click', () => {
-    document.getElementById('game-overlay').classList.add('hidden');
-    initGame();
-  });
+  // El juego debe iniciarse automáticamente sin esperar al botón
+  // (ya no hay overlay inicial)
+  initGame();
   
   updateHUD();
 });

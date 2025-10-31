@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId "com.intocables.losmundosdearay"
-        minSdk 21
+        minSdk 23
         targetSdk 34
         versionCode 3
         versionName "1.2"
@@ -36,7 +36,7 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     
     // Firebase
-    implementation platform('com.google.firebase:firebase-bom:32.7.0')
+    implementation platform('com.google.firebase:firebase-bom:33.5.1')
     implementation 'com.google.firebase:firebase-auth'
     implementation 'com.google.firebase:firebase-firestore'
     

@@ -4,10 +4,9 @@
    ======================================== */
 
 import { getCandies, addCandies, getBest, setBest, saveScoreToServer } from './storage.js';
-import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js?v=3';
+import { initCommonUI, updateHUD, toast, playSound, playAudioFile, vibrate, celebrateCandyEarned } from './ui.js';
 
-const BEST_KEY = 'aray_best_pabellon';
-const BEST_LEVEL_KEY = 'aray_best_level_pabellon';
+const BEST_KEY = 'pabellon';
 
 // Canvas y contexto
 let canvas, ctx, dpr;
@@ -17,13 +16,13 @@ let animationId;
 const demonImages = [];
 for (let i = 1; i <= 4; i++) {
   const img = new Image();
-  img.src = `assets/img/enemigos/zombie${i}.png`;
+  img.src = `img/enemigos/zombie${i}.png`;
   demonImages.push(img);
 }
 
 // Cargar fondo del pabellón
 const bgImage = new Image();
-bgImage.src = 'assets/img/fondos/pabellon.png';
+bgImage.src = 'img/fondos/pabellon.png';
 
 // Estado del juego
 const state = {
@@ -160,6 +159,11 @@ const drawBackgroundParticles = () => {
 
 // Inicializar juego
 const initGame = () => {
+  // Limpiar animación de nivel si existe
+  if (typeof window !== 'undefined' && typeof window.hideLevelUpAnimation === 'function') {
+    window.hideLevelUpAnimation();
+  }
+  
   const width = canvas.width / dpr;
   const height = canvas.height / dpr;
   
@@ -301,9 +305,7 @@ const gameLoop = () => {
         // Crear partículas de explosión
         createExplosionParticles(demon.x + demon.size/2, demon.y + demon.size/2);
         
-        const audio = new Audio('assets/audio/disparo.mp3');
-        audio.volume = 0.5;
-        audio.play().catch(e => console.log('Audio no disponible'));
+        playAudioFile('audio/disparo.mp3', 0.5);
         
         vibrate(30);
         updateGameHUD();
@@ -407,9 +409,7 @@ const spawnNewWave = (width) => {
   state.demonMoveDelay = Math.max(400, state.demonMoveDelay - 80);
   
   // Solo sonido y vibración (sin popup feo)
-  const audio = new Audio('assets/audio/ganar.mp3');
-  audio.volume = 0.5;
-  audio.play().catch(e => console.log('Audio no disponible'));
+  playAudioFile('audio/ganar.mp3', 0.5);
   
   vibrate([100, 50, 100, 50, 100]);
   
@@ -693,42 +693,38 @@ const setupControls = () => {
 };
 
 // End game
-const endGame = (reason = '👿 ¡Los demonios te alcanzaron!') => {
+const endGame = async (reason = '👿 ¡Los demonios te alcanzaron!') => {
   state.gameOver = true;
   cancelAnimationFrame(animationId);
   
-  const audio = new Audio('assets/audio/perder.mp3');
-  audio.volume = 0.5;
-  audio.play().catch(e => console.log('Audio no disponible'));
+  playAudioFile('audio/perder.mp3', 0.5);
   
   vibrate([200, 100, 200]);
   
-  const bestScore = getBest(BEST_KEY);
-  const isNewRecord = state.score > bestScore;
-  const bestLevel = getBest(BEST_LEVEL_KEY) || 1;
-  const isNewLevelRecord = (state.wave + 1) > bestLevel;
-  
-  // El nivel se basa en las waves completadas, no en puntos
+  const bestLevel = await getBest('pabellon');
+  const currentLevel = state.wave + 1;
+  const isNewRecord = currentLevel > bestLevel;
   
   if (isNewRecord) {
-    setBest(BEST_KEY, state.wave + 1); // Guardar NIVEL (wave + 1), no score
-    saveScoreToServer('pabellon', state.score, { score: state.score, candies: getCandies() });
-  }
-  
-  if (isNewLevelRecord) {
-    localStorage.setItem(BEST_LEVEL_KEY, (state.wave + 1).toString());
+    await setBest('pabellon', currentLevel);
+    saveScoreToServer('pabellon', currentLevel, { level: currentLevel, score: state.score, candies: getCandies() });
   }
   
   const overlay = document.getElementById('game-overlay');
   const content = overlay.querySelector('.game-overlay-content');
   
   content.innerHTML = `
-    <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem;">${reason}</h2>
-    <div class="game-stats" style="display: flex; justify-content: center; margin: 0.8rem 0;">
-      <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 120px;">
+    <h2 style="margin: 0 0 0.8rem 0; font-size: 1.4rem;">😅 Fin del juego</h2>
+    <div class="game-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 0.8rem 0;">
+      <div class="stat-card" style="background: linear-gradient(135deg, #ff6b9d, #c44569); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(255, 107, 157, 0.3); min-width: 100px;">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">PUNTOS</div>
+        <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.score}</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Puntos conseguidos</div>
+      </div>
+      <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 100px;">
         <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">NIVEL</div>
-        <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.wave + 1}</div>
-        <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.wave + 1, parseInt(localStorage.getItem('aray_best_level_pabellon')) || 1)}</div>
+        <div style="font-size: 1.6rem; font-weight: bold; color: white;">${currentLevel}</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(currentLevel, bestLevel)}</div>
       </div>
     </div>
     <div style="display: flex; justify-content: center; margin-top: 0.8rem;">
@@ -736,9 +732,21 @@ const endGame = (reason = '👿 ¡Los demonios te alcanzaron!') => {
     </div>
   `;
   
+  // Forzar estilos inline para que tenga fondo pero NO tape el header
+  const headerHeight = 60; // Altura fija del header
+  
+  overlay.style.position = 'absolute';
+  overlay.style.inset = `${headerHeight}px 0px 0px`;
+  overlay.style.width = '100%';
+  overlay.style.height = `calc(100% - ${headerHeight}px)`;
+  overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.75)';
+  overlay.style.display = 'flex';
+  overlay.style.alignItems = 'center';
+  overlay.style.justifyContent = 'center';
+  overlay.style.zIndex = '999'; // Menor que el header (1000)
+  
   overlay.classList.add('active');
   overlay.classList.remove('hidden');
-  overlay.style.display = 'flex';
   
   document.getElementById('btn-restart').addEventListener('click', () => {
     overlay.classList.remove('active');
@@ -750,10 +758,10 @@ const endGame = (reason = '👿 ¡Los demonios te alcanzaron!') => {
 
 // Actualizar HUD
 const updateGameHUD = () => {
-  const scoreEl = document.getElementById('hud-score');
+  const hudLevel = document.getElementById('hud-level');
   const candiesEl = document.getElementById('hud-candies');
   
-  if (scoreEl) scoreEl.textContent = `Nivel ${state.wave + 1}`;
+  if (hudLevel) hudLevel.textContent = `Nivel ${state.wave + 1}`;
   if (candiesEl) candiesEl.textContent = getCandies();
 };
 
@@ -764,19 +772,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initCommonUI();
   initCanvas();
   
-  const bestLevel = getBest(BEST_LEVEL_KEY) || 1;
-  const bestLevelEl = document.getElementById('best-level');
-  if (bestLevelEl) {
-    bestLevelEl.textContent = bestLevel;
-  }
-  
-  document.getElementById('btn-start').addEventListener('click', () => {
-    const overlay = document.getElementById('game-overlay');
-    overlay.classList.remove('active');
-    overlay.classList.add('hidden');
-    overlay.style.display = 'none';
-    initGame();
-  });
+  // El juego debe iniciarse automáticamente sin esperar al botón
+  // (ya no hay overlay inicial)
+  initGame();
   
   updateHUD();
 });

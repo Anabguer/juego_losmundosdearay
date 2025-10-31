@@ -6,8 +6,8 @@
    - Modales robustas y navegación a minijuegos
    ======================================== */
 
-import { getCoins, getEnergy, setEnergy, setCoins, getBest } from './storage.js';
-import { updateHUD, toast, showModal, hideModal, playSound, vibrate } from './ui.js?v=3';
+import { getCoins, getEnergy, setEnergy, setCoins, getBest, initGuestDataMigration } from './storage.js';
+import { updateHUD, toast, showModal, hideModal, playSound, playAudioFile, vibrate } from './ui.js';
 import { getAraySprite } from './sprites.js';
 import { initAuth, isLoggedIn, getCurrentUser, login, register, logout, getRankingGlobal } from './auth.js';
 
@@ -31,8 +31,8 @@ export const MAP = [
   [ 0, 0,11, 1,11,11, 0, 0, 0, 0],  // H (fila 7) ← H3 + tierra H2,H4,H5
   [ 0, 0,11, 1,11,11, 0,13, 9, 0],  // I (fila 8) ← Parque I7-I8-J7-J8 + I3 + tierra I2,I4,I5
   [ 6, 9,11, 1, 1, 1,12, 9, 9, 0],  // J (fila 9) ← Yayos J0-J1-K0-K1 + J3,J4,J5,J6 entrada Parque + tierra J2 + carretera en J4 para acceso al ranking
-  [ 9, 9,12, 1,16,11, 0, 0, 0, 0],  // K (fila 10) ← K2 entrada Yayos + K3 + RANKING K4 (movido) + tierra K5
-  [ 0,11,11, 1,11,11, 0, 0, 0, 0],  // L (fila 11) ← L3 + tierra L1,L2,L4,L5
+  [ 9, 9,12, 1,16, 9, 0, 0, 0, 0],  // K (fila 10) ← K2 entrada Yayos + K3 + AJUSTES K4 (principal) + K5 (parte)
+  [ 0,11,11, 1, 9, 9, 0, 0, 0, 0],  // L (fila 11) ← L3 + tierra L1,L2 + AJUSTES L4-L5 (partes)
   [ 0, 0,11, 1, 0,11,11, 8, 9, 0],  // M (fila 12) ← Edificio M7-M8-N7-N8 + M3 + tierra M2,M5,M6
   [ 0, 0,11, 1, 1, 1,12, 9, 9, 0],  // N (fila 13) ← N6 entrada Edificio + N3,N4,N5 + tierra N2
   [ 0, 0,11,11,11, 1,11,11, 0, 0],  // O (fila 14) ← O5 + tierra O2,O3,O4,O6,O7
@@ -57,7 +57,7 @@ const ROUTES = {
 };
 
 // Estado avatar: posición en celdas (fila/col)
-let avatarPos = { row: 17, col: 9 }; // R9 (inicio en césped)
+let avatarPos = { row: 13, col: 6 }; // N6 (inicio en puerta del edificio)
 let isMoving = false;
 let lastInteractionTime = Date.now();
 let boredInterval = null;
@@ -130,11 +130,18 @@ const showAraySpeech = (message, duration = 3000) => {
 
 // ====== Init ======
 export const initMap = () => {
-  // Fresitas iniciales si no hay
-  if (getCoins() === 0) setCoins(5);
+  // Intentar migrar datos de invitado si el usuario está logueado
+  initGuestDataMigration();
+  // Fresitas iniciales SOLO si localStorage está completamente vacío (primera vez)
+  if (localStorage.length === 0 && getCoins() === 0) {
+    setCoins(5);
+  }
   renderMap();
   setupAvatar();
   setupEventListeners();
+  
+  // Hacer updateAvatarPosition disponible globalmente
+  window.updateAvatarPosition = updateAvatarPosition;
 
   // Si el avatar no está sobre carretera, colócalo en la carretera adyacente
   console.log(`🚀 Posición inicial del avatar: fila=${avatarPos.row}, col=${avatarPos.col}`);
@@ -201,34 +208,23 @@ const renderMap = () => {
         else if (random < 0.9) tile.classList.add('grass-3');
         else tile.classList.add('grass-4');
         
-        // Rotación aleatoria para variedad visual
-        const rotation = Math.floor(Math.random() * 4) * 90; // 0°, 90°, 180°, 270°
-        tile.style.transformOrigin = '50% 50%';
-        tile.style.transform = `rotate(${rotation}deg) scale(1.02)`; // Escala leve para evitar microgrietas
+        // Evitar transformaciones que provoquen micro-grietas entre celdas
+        tile.style.transform = 'none';
       }
       
-      // Tierra aleatoria (código 11) - también con rotación
+      // Tierra aleatoria (código 11)
       if (code === 11) {
-        // Rotación aleatoria para variedad visual
-        const rotation = Math.floor(Math.random() * 4) * 90; // 0°, 90°, 180°, 270°
-        tile.style.transformOrigin = '50% 50%';
-        tile.style.transform = `rotate(${rotation}deg) scale(1.02)`; // Escala leve para evitar microgrietas
+        tile.style.transform = 'none';
       }
       
-      // Carreteras aleatorias (código 1) - también con rotación
+      // Carreteras (código 1)
       if (code === 1) {
-        // Rotación aleatoria para variedad visual
-        const rotation = Math.floor(Math.random() * 4) * 90; // 0°, 90°, 180°, 270°
-        tile.style.transformOrigin = '50% 50%';
-        tile.style.transform = `rotate(${rotation}deg) scale(1.02)`; // Escala leve para evitar microgrietas
+        tile.style.transform = 'none';
       }
       
-      // Casilla de inicio (código 10) - también con rotación
+      // Casilla de inicio (código 10)
       if (code === 10) {
-        // Rotación aleatoria para variedad visual
-        const rotation = Math.floor(Math.random() * 4) * 90; // 0°, 90°, 180°, 270°
-        tile.style.transformOrigin = '50% 50%';
-        tile.style.transform = `rotate(${rotation}deg) scale(1.02)`; // Escala leve para evitar microgrietas
+        tile.style.transform = 'none';
       }
       
       // Entradas (código 12) - colorear según edificio cercano
@@ -262,10 +258,10 @@ const renderMap = () => {
         addRecordBadge(tile, code);
       }
       
-      // Pieza de Ranking (código 16) - clickable
+      // Pieza de Ajustes (código 16) - clickable
       if (code === 16) {
         tile.addEventListener('click', async () => {
-          console.log(`🏆 Ranking clickeado en: ${rowLetters[row]}${col}`);
+          console.log(`⚙️ Ajustes clickeado en: ${rowLetters[row]}${col}`);
           
           // Buscar carretera adyacente
           const adjRoad = findNearestRoad(row, col);
@@ -281,20 +277,19 @@ const renderMap = () => {
             updateAvatarPosition(adjRoad[0], adjRoad[1]);
           }
           
-          // Usar GameBridge para abrir ranking (maneja login automáticamente)
-          if (window.GameBridge) {
-            window.GameBridge.openRanking();
-          } else {
-            // Fallback para web
-            await showRankingModal();
-          }
+          // Abrir modal de ajustes
+          import('./ui.js').then(module => {
+            if (module.showSettingsModal) {
+              module.showSettingsModal();
+            }
+          });
         });
       }
       
       // Partes de edificios (código 9) - asignar background-position
       if (code === 9) {
         // Función auxiliar para detectar si es un edificio
-        const isBuilding = (c) => (c >= 3 && c <= 8) || c === 13 || c === 14 || c === 15;
+        const isBuilding = (c) => (c >= 3 && c <= 8) || c === 13 || c === 14 || c === 15 || c === 16;
         
         // Determinar qué parte es según vecinos
         const topLeft = row > 0 && col > 0 && isBuilding(MAP[row-1][col-1]);
@@ -321,7 +316,7 @@ const renderMap = () => {
         }
         
         // Aplicar clase de edificio para la imagen
-        const buildingClass = ['', '', '', 'school', 'skate', 'gym', 'yayos', 'informatica', 'edificio', '', '', '', '', 'park', 'tienda', 'rio'][buildingCode] || '';
+        const buildingClass = ['', '', '', 'school', 'skate', 'gym', 'yayos', 'informatica', 'edificio', '', '', '', '', 'park', 'tienda', 'rio', 'casilla-central'][buildingCode] || '';
         if (buildingClass) tile.classList.add(buildingClass);
         
         // Posición de la imagen
@@ -344,7 +339,6 @@ const renderMap = () => {
         tile.addEventListener('click', async () => {
           console.log(`🛣️ Carretera: ${rowLetters[row]}${col} (fila=${row}, col=${col})`);
           console.log(`📍 Avatar actual: fila=${avatarPos.row}, col=${avatarPos.col}`);
-          showAraySpeech(`Moviendo a ${rowLetters[row]}${col}`, 2000);
           if (isMoving) return;
           resetBoredTimer(); // Reiniciar contador
           const start = [avatarPos.row, avatarPos.col]; // Usar posición actual del avatar
@@ -382,15 +376,15 @@ const addRecordBadge = (tile, buildingCode) => {
   let recordType = 'Nivel';
   
   switch(buildingCode) {
-    case 3: recordKey = 'aray_best_cole'; break; // Cole
-    case 4: recordKey = 'aray_best_skate'; recordType = 'm'; break; // Skate (metros)
-    case 5: recordKey = 'aray_best_pabellon'; break; // Pabellón
-    case 6: recordKey = 'aray_best_yayos'; break; // Yayos
-    case 7: recordKey = 'aray_best_informatica'; break; // Informática
-    case 8: recordKey = 'aray_best_edificio'; recordType = 'm'; break; // Edificio (metros)
-    case 13: recordKey = 'aray_best_pacman'; break; // Parque (Pacman)
-    case 14: recordKey = 'aray_best_tienda'; break; // Tienda
-    case 15: recordKey = 'aray_best_rio'; break; // Río
+    case 3: recordKey = 'cole'; break; // Cole
+    case 4: recordKey = 'skate'; recordType = 'm'; break; // Skate (metros)
+    case 5: recordKey = 'pabellon'; break; // Pabellón
+    case 6: recordKey = 'yayos'; break; // Yayos
+    case 7: recordKey = 'informatica'; break; // Informática
+    case 8: recordKey = 'edificio'; recordType = 'm'; break; // Edificio (metros)
+    case 13: recordKey = 'parque'; break; // Parque (Pacman)
+    case 14: recordKey = 'tienda'; break; // Tienda
+    case 15: recordKey = 'rio'; break; // Río
     default: return;
   }
   
@@ -414,7 +408,7 @@ const getTileClass = (code, row, col) => {
     case 13: return `${base} park building-2x2`; // Parque (Pacman)
     case 14: return `${base} tienda building-2x2`; // Tienda de Chuches
     case 15: return `${base} rio building-2x2`; // Río
-    case 16: return `${base} ranking clickable`; // Ranking (1x1)
+    case 16: return `${base} casilla-central building-2x2 clickable`; // Casilla Central (2x2)
     case 9: return `${base} building-part`; // Partes del edificio (invisibles)
     case 10: return `${base} road ${getRoadClass(row, col)} start`; // Casilla de inicio
     case 11: return `${base} dirt`; // Tierra
@@ -481,7 +475,7 @@ const setupEventListeners = () => {
 };
 
 // ====== Movimiento ======
-const updateAvatarPosition = () => {
+export const updateAvatarPosition = () => {
   const avatar = document.getElementById('avatar');
   const mapEl = document.getElementById('map');
   if (!avatar || !mapEl) {
@@ -511,9 +505,9 @@ const updateAvatarPosition = () => {
   const avatarW = cellW * 0.8;
   const avatarH = cellH * 0.8;
   
-  // Posición del avatar (centrado en la celda)
+  // Posición del avatar (centrado en la celda, ajustado un poco más arriba)
   const x = rect.left + (avatarPos.col * cellW) + (cellW - avatarW) / 2;
-  const y = rect.top + (avatarPos.row * cellH) + (cellH - avatarH) / 2;
+  const y = rect.top + (avatarPos.row * cellH) + (cellH - avatarH) / 2 - (cellH * 0.1); // Subir un 10% de la altura de la celda
 
   console.log(`🎨 Avatar pos: fila=${avatarPos.row}, col=${avatarPos.col}`);
   console.log(`📐 Celda: ${cellW.toFixed(1)}x${cellH.toFixed(1)}px`);
@@ -550,9 +544,7 @@ export const walkPath = async (path, stepMs = 160) => {
     }
     
     // Sonido de andar en cada paso
-    const audio = new Audio('assets/audio/andar.mp3');
-    audio.volume = 0.3;
-    audio.play().catch(e => console.log('Audio no disponible'));
+    playAudioFile('audio/andar.mp3', 0.3);
     
     await new Promise(res => setTimeout(res, stepMs));
   }
@@ -577,7 +569,8 @@ const onBuildingClick = async (row, col, buildingType) => {
     6: [10, 2],  // Yayos -> K2
     8: [13, 6],  // Edificio -> N6
     5: [16, 2],  // Pabellón -> Q2
-    15: [17, 7]  // Río -> R7
+    15: [17, 7], // Río -> R7
+    16: [10, 3]  // Ajustes -> K3 (carretera adyacente)
   };
   
   const goalRoad = entrances[buildingType];
@@ -585,7 +578,17 @@ const onBuildingClick = async (row, col, buildingType) => {
 
   const startRoad = whereToStart();
   const path = findPath(MAP, startRoad, goalRoad);
-  if (!path || path.length < 2) { 
+  // Si ya estamos en la entrada del juego, abrir directamente el modal
+  if ((!path || path.length < 2)) {
+    const atEntrance = Array.isArray(startRoad) && Array.isArray(goalRoad)
+      && startRoad[0] === goalRoad[0] && startRoad[1] === goalRoad[1];
+    if (atEntrance) {
+      playSound('click');
+      resetBoredTimer();
+      showAraySpeech(randomMsg('arriving'), 1500);
+      setTimeout(async () => await showBuildingModal(buildingType, buildingName), 200);
+      return;
+    }
     console.log('Start:', startRoad, 'Goal:', goalRoad);
     toast('No hay camino por carretera'); 
     return; 
@@ -599,7 +602,7 @@ const onBuildingClick = async (row, col, buildingType) => {
 
   // Mensaje al llegar
   showAraySpeech(randomMsg('arriving'), 2000);
-  setTimeout(() => showBuildingModal(buildingType, buildingName), 500);
+  setTimeout(async () => await showBuildingModal(buildingType, buildingName), 500);
 };
 
 const getBuildingName = (type) => {
@@ -613,19 +616,22 @@ const getBuildingName = (type) => {
     case 13: return 'Parque';
     case 14: return 'Tienda de Chuches';
     case 15: return 'Río';
+    case 16: return 'Ajustes';
     default: return 'Lugar';
   }
 };
 
 // ====== Energía ======
 const consumeEnergy = (steps) => {
+  // 1 punto por cada 5 casillas recorridas (redondeo hacia arriba para recorridos cortos)
+  const cost = Math.max(1, Math.ceil(steps / 5));
   const have = getEnergy();
-  if (have < steps) { 
+  if (have < cost) {
     // Mensaje gracioso cuando no hay energía
-    showAraySpeech(randomMsg('noEnergy'), 3000); 
-    return false; 
+    showAraySpeech(randomMsg('noEnergy'), 3000);
+    return false;
   }
-  setEnergy(have - steps);
+  setEnergy(have - cost);
   updateHUD();
   updateAvatarExpression(); // Actualizar expresión al gastar energía
   return true;
@@ -641,9 +647,7 @@ const onEatClick = () => {
   animateCookieToAray();
 
   // Reproducir sonido de dar comida (al pulsar botón)
-  const audio = new Audio('assets/audio/darcomida.mp3');
-  audio.volume = 0.5;
-  audio.play().catch(e => console.log('Audio no disponible'));
+  playAudioFile('audio/darcomida.mp3', 0.5);
   
   vibrate(50);
   resetBoredTimer(); // Reiniciar contador de aburrimiento
@@ -697,9 +701,7 @@ const animateCookieToAray = () => {
   
   // Sonido de comer cuando llega la galleta (900ms = casi al final de la animación 1s)
   setTimeout(() => {
-    const audioGalleta = new Audio('assets/audio/galleta.mp3');
-    audioGalleta.volume = 0.6;
-    audioGalleta.play().catch(e => console.log('Audio no disponible'));
+    playAudioFile('audio/galleta.mp3', 0.6);
   }, 900);
   
   // Eliminar después de la animación
@@ -810,15 +812,68 @@ export const findPath = (grid, start, goal) => {
 };
 
 // ====== Modal edificios ======
-const showBuildingModal = (buildingType, buildingName) => {
+const showBuildingModal = async (buildingType, buildingName) => {
+  // Ocultar el avatar del pueblo cuando se muestra el modal
+  const avatar = document.querySelector('.avatar');
+  if (avatar) {
+    avatar.style.display = 'none';
+    avatar.style.visibility = 'hidden';
+    avatar.style.opacity = '0';
+    console.log('✅ Avatar del pueblo ocultado en modal');
+  }
+  
+  // Si es ajustes (tipo 16), abrir modal de ajustes directamente
+  if (buildingType === 16) {
+    console.log('⚙️ Abriendo modal de ajustes...');
+    import('./ui.js').then(module => {
+      if (module.showSettingsModal) {
+        module.showSettingsModal();
+      }
+    });
+    return;
+  }
+  
   const info = getBuildingInfo(buildingType);
   const gameRoute = ROUTES[info.type];
-  const record = getBest(info.recordKey);
+  
+  // Obtener el nivel desde localStorage usando la estructura unificada
+  let record = 1;
+  if (info.recordKey) {
+    try {
+      const { getBest } = await import('./storage.js');
+      record = await getBest(info.recordKey) || 1;
+    } catch (error) {
+      console.log('Error obteniendo nivel:', error);
+    }
+  }
+  
+  // Si no hay nivel guardado, intentar obtenerlo desde GameBridge
+  if (record === 1 && window.GameBridge && window.GameBridge.getBestLevel) {
+    try {
+      // Hacer llamada síncrona para obtener el nivel del juego correcto
+      const levelData = await new Promise((resolve) => {
+        window.onBestLevelReceived = (gameId, level) => {
+          // Extraer el gameId de la clave (aray_best_skate -> skate)
+          const expectedGameId = info.recordKey.replace('aray_best_', '');
+          if (gameId === expectedGameId) {
+            resolve(level);
+          }
+        };
+        // Extraer el gameId de la clave (aray_best_skate -> skate)
+        const gameId = info.recordKey.replace('aray_best_', '');
+        window.GameBridge.getBestLevel(gameId);
+        // Timeout después de 1 segundo
+        setTimeout(() => resolve(1), 1000);
+      });
+      record = levelData;
+      console.log(`🎮 Nivel obtenido desde GameBridge para ${info.type}:`, record);
+    } catch (error) {
+      console.log('Error obteniendo nivel desde GameBridge:', error);
+    }
+  }
 
   // Sonido de inicio de juego
-  const audio = new Audio('assets/audio/iniciojuego.mp3');
-  audio.volume = 0.5;
-  audio.play().catch(e => console.log('Audio no disponible'));
+  playAudioFile('audio/iniciojuego.mp3', 0.5);
 
   const content = document.createElement('div');
   content.innerHTML = `
@@ -826,48 +881,171 @@ const showBuildingModal = (buildingType, buildingName) => {
       <img src="${info.image}" alt="${buildingName}" 
         style="width:100%; height:160px; object-fit:cover; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.2);"
         onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22160%22%3E%3Crect width=%22400%22 height=%22160%22 fill=%22%23b86cff%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 font-size=%2260%22 text-anchor=%22middle%22 dy=%22.3em%22%3E${info.icon}%3C/text%3E%3C/svg%3E'">
-      <!-- Récord eliminado - no queremos mostrar niveles -->
     </div>
     <h3 style="font-size:1.3rem; font-weight:900; color:#000; margin:0 0 8px 0; text-align:center;">${info.icon} ${buildingName}</h3>
     <p style="font-size:0.95rem; line-height:1.5; color:#555; margin-bottom:16px; text-align:center;">${info.description}</p>
-    <button class="btn-modal-play" id="modal-play-btn">
+    
+    <!-- Estadísticas del juego -->
+    <div style="display: flex; justify-content: center; gap: 1rem; margin: 1rem 0;">
+      <div style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.8rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 100px;">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem; color: white;">NIVEL MÁS ALTO</div>
+        <div id="best-level-display" style="font-size: 1.1rem; font-weight: bold; color: white;">${record || 1}</div>
+      </div>
+      <div style="background: linear-gradient(135deg, #ffd700, #ffb347); padding: 0.8rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3); min-width: 100px; cursor: pointer;" id="btn-ranking-modal" data-game-type="${info.type}" data-game-name="${buildingName}">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem; color: white;">🏆 RANKING</div>
+        <div style="font-size: 1.1rem; font-weight: bold; color: white;">Ver Top</div>
+      </div>
+    </div>
+    
+    <button class="btn-modal-play" id="modal-play-btn" data-game-route="${gameRoute}">
       ¡JUGAR AHORA!
     </button>
   `;
 
   showModal('', content);
 
-  document.getElementById('modal-play-btn')?.addEventListener('click', () => {
+  // Ocultar el avatar del pueblo DESPUÉS de mostrar el modal
+  setTimeout(() => {
+    const avatar = document.querySelector('.avatar');
+    if (avatar) {
+      avatar.style.display = 'none';
+      avatar.style.visibility = 'hidden';
+      avatar.style.opacity = '0';
+      avatar.style.pointerEvents = 'none';
+      avatar.style.zIndex = '-1';
+      console.log('✅ Avatar del pueblo ocultado en modal (después de mostrar)');
+    }
+  }, 50);
+
+  document.getElementById('modal-play-btn')?.addEventListener('click', (event) => {
+    // Obtener la ruta ANTES de cerrar el modal
+    const gameRoute = event.target.getAttribute('data-game-route') || 'skate.html';
+    console.log(`🎮 Navegando a: ${gameRoute}`);
+    
     try { hideModal(); } catch(e) {
       const mr=document.getElementById('modal-root'); if(mr) mr.remove();
     }
     playSound('click');
     
     // Notificar que se va a jugar un juego (para anuncios)
-    if (window.GameBridge) {
-      window.GameBridge.onGamePlayed();
+    if (window.GameBridge && window.GameBridge.onGamePlayed) {
+      try {
+        window.GameBridge.onGamePlayed();
+      } catch(e) {
+        console.log('Error en GameBridge.onGamePlayed:', e);
+      }
     }
     
+    // Navegar a la página HTML del juego
     window.location.href = gameRoute;
   });
+
+        // Event listener para el botón de ranking
+        document.getElementById('btn-ranking-modal')?.addEventListener('click', async () => {
+          playSound('click');
+          await showGameRankingModal(info.type, buildingName);
+        });
+};
+
+// ====== CARGAR JUEGOS COMO MÓDULOS ======
+const loadGameModule = async (gameType) => {
+  try {
+    console.log(`🎮 Cargando juego: ${gameType}`);
+    
+    // Importar dinámicamente el módulo del juego
+    const gameModule = await import(`./${gameType}.js`);
+    
+    // Si el módulo tiene una función de inicialización, llamarla
+    const initFunctionName = `init${gameType.charAt(0).toUpperCase() + gameType.slice(1)}Game`;
+    if (gameModule[initFunctionName]) {
+      gameModule[initFunctionName]();
+    } else if (gameModule.initGame) {
+      gameModule.initGame();
+    } else if (gameModule.default) {
+      gameModule.default();
+    } else {
+      console.log(`⚠️ Módulo ${gameType} cargado pero sin función de inicialización`);
+    }
+    
+  } catch (error) {
+    console.error(`❌ Error cargando juego ${gameType}:`, error);
+    
+    // Fallback: mostrar mensaje de error
+    const content = document.createElement('div');
+    content.innerHTML = `
+      <div style="text-align: center; padding: 20px;">
+        <h3>🎮 Juego no disponible</h3>
+        <p>El juego ${gameType} no se pudo cargar.</p>
+        <p style="color: #888; font-size: 12px;">Error: ${error.message}</p>
+        <button onclick="hideModal()" style="margin-top: 10px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 4px;">Cerrar</button>
+      </div>
+    `;
+    
+    showModal(`Error - ${gameType}`, content);
+  }
 };
 
 const getBuildingInfo = (type) => {
   switch(type){
-    case 3: return { type:'school', name:'Cole', icon:'🏫', description:'¡Salva a tus amigos de los demonios!', image:'assets/img/juegos/colegio.png?v=1', recordKey:'aray_best_cole', recordType:'nivel' };
-    case 4: return { type:'skate', name:'Skate Park', icon:'🛹', description:'¡Corre y salta con tu skate!', image:'assets/img/juegos/skate.png?v=1', recordKey:'aray_best_skate', recordType:'m' };
-    case 5: return { type:'gym',  name:'Pabellón', icon:'🏀', description:'¡Tiros a canasta!', image:'assets/img/juegos/pabellon.png?v=1', recordKey:'aray_best_pabellon', recordType:'nivel' };
-    case 6: return { type:'yayos', name:'Casa Yayos', icon:'👴👵', description:'¡Dispara a las ratas!', image:'assets/img/juegos/casayayos.png?v=1', recordKey:'aray_best_yayos', recordType:'nivel' };
-    case 7: return { type:'informatica', name:'Informática', icon:'💻', description:'¡Conecta los cables!', image:'assets/img/juegos/informatica.png?v=1', recordKey:'aray_best_informatica', recordType:'nivel' };
-    case 8: return { type:'edificio', name:'Edificio', icon:'🏢', description:'¡Escala lo más alto!', image:'assets/img/juegos/edificio.png?v=1', recordKey:'aray_best_edificio', recordType:'m' };
-    case 13: return { type:'park', name:'Parque', icon:'🎮', description:'¡Come las chuches y escapa de los demonios!', image:'assets/img/juegos/parque.png?v=1', recordKey:'aray_best_pacman', recordType:'nivel' };
-    case 14: return { type:'tienda', name:'Tienda de Chuches', icon:'🍬', description:'¡Conecta 3 chuches del mismo color!', image:'assets/img/juegos/tienda.png?v=1', recordKey:'aray_best_tienda', recordType:'nivel' };
-    case 15: return { type:'rio', name:'Río', icon:'🌊', description:'¡Salta por las piedras sin caer al agua!', image:'assets/img/juegos/rio.png?v=1', recordKey:'aray_best_rio', recordType:'nivel' };
-    default: return { type:'unknown', name:'Lugar', icon:'🏠', description:'Un lugar del pueblo.', image:'assets/img/casa.svg', recordKey:'', recordType:'' };
+    case 3: return { type:'school', name:'Cole', icon:'🏫', description:'¡Salva a tus amigos de los demonios!', image:'img/juegos/colegio.png?v=1', recordKey:'cole', recordType:'nivel' };
+    case 4: return { type:'skate', name:'Skate Park', icon:'🛹', description:'¡Corre y salta con tu skate!', image:'img/juegos/skate.png?v=1', recordKey:'skate', recordType:'nivel' };
+    case 5: return { type:'gym',  name:'Pabellón', icon:'🏀', description:'¡Tiros a canasta!', image:'img/juegos/pabellon.png?v=1', recordKey:'pabellon', recordType:'nivel' };
+    case 6: return { type:'yayos', name:'Casa Yayos', icon:'👴👵', description:'¡Dispara a las ratas!', image:'img/juegos/casayayos.png?v=1', recordKey:'yayos', recordType:'nivel' };
+    case 7: return { type:'informatica', name:'Informática', icon:'💻', description:'¡Conecta los cables!', image:'img/juegos/informatica.png?v=1', recordKey:'informatica', recordType:'nivel' };
+    case 8: return { type:'edificio', name:'Edificio', icon:'🏢', description:'¡Escala lo más alto!', image:'img/juegos/edificio.png?v=1', recordKey:'edificio', recordType:'m' };
+    case 13: return { type:'park', name:'Parque', icon:'🎮', description:'¡Come las chuches y escapa de los demonios!', image:'img/juegos/parque.png?v=1', recordKey:'parque', recordType:'nivel' };
+    case 14: return { type:'tienda', name:'Tienda de Chuches', icon:'🍬', description:'¡Conecta 3 chuches del mismo color!', image:'img/juegos/tienda.png?v=1', recordKey:'tienda', recordType:'nivel' };
+    case 15: return { type:'rio', name:'Río', icon:'🌊', description:'¡Salta por las piedras sin caer al agua!', image:'img/juegos/rio.png?v=1', recordKey:'rio', recordType:'nivel' };
+    default: return { type:'unknown', name:'Lugar', icon:'🏠', description:'Un lugar del pueblo.', image:'img/casa.svg', recordKey:'', recordType:'' };
   }
 };
 
-// ====== Modal Ranking ======
+// ====== Modal Ranking Yayos ======
+const showYayosRankingModal = async () => {
+  // Sonido
+  playSound('click');
+  
+  const content = document.createElement('div');
+  content.style.cssText = 'max-width: 600px; margin: 0 auto;';
+  
+  // Obtener ranking de Yayos
+  const ranking = await getYayosRanking();
+  
+  content.innerHTML = `
+    <div style="text-align:center; padding:20px;">
+      <h2 style="font-size:2rem; margin-bottom:1rem;">🐀 Ranking Yayos</h2>
+      <p style="font-size:1.1rem; color:#666; margin-bottom:2rem;">Top jugadores por nivel máximo alcanzado</p>
+      
+      <div id="yayos-ranking-list" style="max-height: 400px; overflow-y: auto; text-align: left;">
+        ${ranking.map((user, index) => `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; margin: 5px 0; background: ${index < 3 ? 'linear-gradient(135deg, #ffd700, #ffb347)' : '#f5f5f5'}; border-radius: 8px; border-left: 4px solid ${index === 0 ? '#ffd700' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : '#ddd'};">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-weight: bold; color: ${index < 3 ? '#fff' : '#333'}; font-size: 1.2rem;">${index + 1}º</span>
+              <span style="font-weight: bold; color: ${index < 3 ? '#fff' : '#333'};">${user.nick || 'Jugador'}</span>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-weight: bold; color: ${index < 3 ? '#fff' : '#333'}; font-size: 1.1rem;">Nivel ${user.bestLevel || 1}</div>
+              <div style="font-size: 0.8rem; color: ${index < 3 ? 'rgba(255,255,255,0.8)' : '#666'};">${user.candiesTotal || 0} 🍬</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      
+      <button id="btn-close-ranking" class="btn-modal-play" style="background:#666; color:white; padding:10px 20px; font-size:1rem; border-radius:8px; border:none; cursor:pointer; margin-top:1rem;">
+        Cerrar
+      </button>
+    </div>
+  `;
+  
+  showModal('🐀 Ranking Yayos', content);
+  
+  // Event listener para cerrar
+  document.getElementById('btn-close-ranking')?.addEventListener('click', () => {
+    hideModal();
+  });
+};
+
+// ====== Modal Ranking Genérico ======
 const showRankingModal = async () => {
   // Sonido
   playSound('click');
@@ -897,22 +1075,419 @@ const showRankingModal = async () => {
     </div>
   `;
   
-  showModal('', content);
+  showModal('🏆 Ranking Global', content);
   
   // Event listeners simplificados
   document.getElementById('btn-google-signin')?.addEventListener('click', () => {
-    // En Android, esto debería abrir el login nativo
-    if (window.GameBridge) {
-      window.GameBridge.openRanking();
-    } else {
-      // Fallback para web - mostrar mensaje
-      alert('En la versión web, usa el botón "Ver ranking sin iniciar sesión"');
-    }
+    // Cerrar este modal y abrir modal de ajustes
+    hideModal();
+    import('./ui.js').then(module => {
+      if (module.showSettingsModal) {
+        module.showSettingsModal();
+      }
+    });
   });
   
   document.getElementById('btn-view-ranking')?.addEventListener('click', async () => {
     await loadRankingList();
   });
+};
+
+// Función para obtener ranking de Yayos
+const getYayosRanking = async () => {
+  try {
+    if (window.GameBridge && window.GameBridge.getYayosRanking) {
+      return new Promise((resolve) => {
+        window.onYayosRankingReceived = (ranking) => {
+          console.log('📊 Ranking de Yayos recibido:', ranking);
+          resolve(ranking || []);
+        };
+        
+        // Timeout después de 5 segundos
+        setTimeout(() => {
+          console.log('⏰ Timeout obteniendo ranking de Yayos');
+          resolve([]);
+        }, 5000);
+        
+        window.GameBridge.getYayosRanking();
+      });
+    } else {
+      // Fallback: obtener desde localStorage si no hay GameBridge
+      const localRanking = localStorage.getItem('yayos_ranking');
+      return localRanking ? JSON.parse(localRanking) : [];
+    }
+  } catch (error) {
+    console.error('Error obteniendo ranking de Yayos:', error);
+    return [];
+  }
+};
+
+// Función para obtener ranking de Skate Park
+const getSkateRanking = async () => {
+  try {
+    if (window.GameBridge && window.GameBridge.getSkateRanking) {
+      return new Promise((resolve) => {
+        window.onSkateRankingReceived = (ranking) => {
+          console.log('📊 Ranking de Skate recibido:', ranking);
+          resolve(ranking || []);
+        };
+        
+        // Timeout después de 5 segundos
+        setTimeout(() => {
+          console.log('⏰ Timeout obteniendo ranking de Skate');
+          resolve([]);
+        }, 5000);
+        
+        window.GameBridge.getSkateRanking();
+      });
+    } else {
+      // Fallback: obtener desde localStorage si no hay GameBridge
+      const localRanking = localStorage.getItem('skate_ranking');
+      return localRanking ? JSON.parse(localRanking) : [];
+    }
+  } catch (error) {
+    console.error('Error obteniendo ranking de Skate:', error);
+    return [];
+  }
+};
+
+// Función para obtener ranking de Cole
+const getColeRanking = async () => {
+  try {
+    if (window.GameBridge && window.GameBridge.getColeRanking) {
+      return new Promise((resolve) => {
+        window.onColeRankingReceived = (ranking) => {
+          console.log('📊 Ranking de Cole recibido:', ranking);
+          resolve(ranking || []);
+        };
+        
+        // Timeout después de 5 segundos
+        setTimeout(() => {
+          console.log('⏰ Timeout obteniendo ranking de Cole');
+          resolve([]);
+        }, 5000);
+        
+        window.GameBridge.getColeRanking();
+      });
+    } else {
+      return [];
+    }
+  } catch (error) {
+    console.error('Error obteniendo ranking de Cole:', error);
+    return [];
+  }
+};
+
+// Función para obtener ranking de Informática
+const getInformaticaRanking = async () => {
+  try {
+    if (window.GameBridge && window.GameBridge.getInformaticaRanking) {
+      return new Promise((resolve) => {
+        window.onInformaticaRankingReceived = (ranking) => {
+          console.log('📊 Ranking de Informática recibido:', ranking);
+          resolve(ranking || []);
+        };
+        
+        // Timeout después de 5 segundos
+        setTimeout(() => {
+          console.log('⏰ Timeout obteniendo ranking de Informática');
+          resolve([]);
+        }, 5000);
+        
+        window.GameBridge.getInformaticaRanking();
+      });
+    } else {
+      return [];
+    }
+  } catch (error) {
+    console.error('Error obteniendo ranking de Informática:', error);
+    return [];
+  }
+};
+
+// Función para obtener ranking de Edificio
+const getEdificioRanking = async () => {
+  try {
+    if (window.GameBridge && window.GameBridge.getEdificioRanking) {
+      return new Promise((resolve) => {
+        window.onEdificioRankingReceived = (ranking) => {
+          console.log('📊 Ranking de Edificio recibido:', ranking);
+          resolve(ranking || []);
+        };
+        
+        setTimeout(() => {
+          console.log('⏰ Timeout obteniendo ranking de Edificio');
+          resolve([]);
+        }, 5000);
+        
+        window.GameBridge.getEdificioRanking();
+      });
+    } else {
+      return [];
+    }
+  } catch (error) {
+    console.error('Error obteniendo ranking de Edificio:', error);
+    return [];
+  }
+};
+
+// Función para obtener ranking de Río
+const getRioRanking = async () => {
+  try {
+    if (window.GameBridge && window.GameBridge.getRioRanking) {
+      return new Promise((resolve) => {
+        window.onRioRankingReceived = (ranking) => {
+          console.log('📊 Ranking de Río recibido:', ranking);
+          resolve(ranking || []);
+        };
+        
+        setTimeout(() => {
+          console.log('⏰ Timeout obteniendo ranking de Río');
+          resolve([]);
+        }, 5000);
+        
+        window.GameBridge.getRioRanking();
+      });
+    } else {
+      return [];
+    }
+  } catch (error) {
+    console.error('Error obteniendo ranking de Río:', error);
+    return [];
+  }
+};
+
+// Función para obtener ranking de Parque
+const getParqueRanking = async () => {
+  try {
+    if (window.GameBridge && window.GameBridge.getParqueRanking) {
+      return new Promise((resolve) => {
+        window.onParqueRankingReceived = (ranking) => {
+          console.log('📊 Ranking de Parque recibido:', ranking);
+          resolve(ranking || []);
+        };
+        
+        setTimeout(() => {
+          console.log('⏰ Timeout obteniendo ranking de Parque');
+          resolve([]);
+        }, 5000);
+        
+        window.GameBridge.getParqueRanking();
+      });
+    } else {
+      return [];
+    }
+  } catch (error) {
+    console.error('Error obteniendo ranking de Parque:', error);
+    return [];
+  }
+};
+
+// Función para obtener ranking de Tienda
+const getTiendaRanking = async () => {
+  try {
+    if (window.GameBridge && window.GameBridge.getTiendaRanking) {
+      return new Promise((resolve) => {
+        window.onTiendaRankingReceived = (ranking) => {
+          console.log('📊 Ranking de Tienda recibido:', ranking);
+          resolve(ranking || []);
+        };
+        
+        setTimeout(() => {
+          console.log('⏰ Timeout obteniendo ranking de Tienda');
+          resolve([]);
+        }, 5000);
+        
+        window.GameBridge.getTiendaRanking();
+      });
+    } else {
+      return [];
+    }
+  } catch (error) {
+    console.error('Error obteniendo ranking de Tienda:', error);
+    return [];
+  }
+};
+
+// Función para obtener ranking de Pabellón
+const getPabellonRanking = async () => {
+  try {
+    if (window.GameBridge && window.GameBridge.getPabellonRanking) {
+      return new Promise((resolve) => {
+        window.onPabellonRankingReceived = (ranking) => {
+          console.log('📊 Ranking de Pabellón recibido:', ranking);
+          resolve(ranking || []);
+        };
+        
+        setTimeout(() => {
+          console.log('⏰ Timeout obteniendo ranking de Pabellón');
+          resolve([]);
+        }, 5000);
+        
+        window.GameBridge.getPabellonRanking();
+      });
+    } else {
+      return [];
+    }
+  } catch (error) {
+    console.error('Error obteniendo ranking de Pabellón:', error);
+    return [];
+  }
+};
+
+// ====== Modal Ranking Específico por Juego ======
+// Hacer la función disponible globalmente
+window.showGameRankingModal = async (gameType, gameName) => {
+  // Sonido
+  playSound('click');
+  
+  // Obtener información del juego
+  const gameInfo = getBuildingInfoByType(gameType);
+  const gameIcon = gameInfo ? gameInfo.icon : '🎮';
+  
+  // Si es Skate Park, Cole, Informática, Tienda, Edificio, Yayos, Pabellón, Río o Parque, mostrar ranking funcional
+  if (gameType === 'skate' || gameType === 'school' || gameType === 'informatica' || gameType === 'tienda' || gameType === 'edificio' || gameType === 'yayos' || gameType === 'gym' || gameType === 'rio' || gameType === 'park') {
+    let ranking = [];
+    
+    // Obtener ranking específico para cada juego
+    if (gameType === 'skate') {
+      ranking = await getSkateRanking();
+    } else if (gameType === 'school') {
+      ranking = await getColeRanking();
+    } else if (gameType === 'informatica') {
+      ranking = await getInformaticaRanking();
+    } else if (gameType === 'tienda') {
+      ranking = await getTiendaRanking();
+    } else if (gameType === 'edificio') {
+      ranking = await getEdificioRanking();
+    } else if (gameType === 'yayos') {
+      ranking = await getYayosRanking();
+    } else if (gameType === 'gym') {
+      ranking = await getPabellonRanking();
+    } else if (gameType === 'rio') {
+      ranking = await getRioRanking();
+    } else if (gameType === 'park') {
+      ranking = await getParqueRanking();
+    }
+    
+    // Ordenar inversamente por nivel (de mayor a menor) y luego por caramelos si hay empate
+    ranking.sort((a, b) => {
+      const levelA = a.bestLevel || 0;
+      const levelB = b.bestLevel || 0;
+      if (levelB !== levelA) {
+        return levelB - levelA; // Mayor nivel primero
+      }
+      const candiesA = a.candiesTotal || 0;
+      const candiesB = b.candiesTotal || 0;
+      return candiesB - candiesA; // Más caramelos primero si mismo nivel
+    });
+    
+    // Crear content con ancho mayor para todos los juegos
+    const content = document.createElement('div');
+    content.style.cssText = 'max-width: 700px; margin: 0 auto; width: 90%;';
+    
+    // Calcular altura máxima: aproximadamente 10 filas (encabezado + 10 jugadores)
+    const maxHeight = 340; // Altura para mostrar ~10 usuarios
+    
+    // Formato compacto para todos los juegos
+    content.innerHTML = `
+      <div style="padding: 20px 20px 20px 10px; margin-left: -20px; margin-right: -25px;">
+        <div class="ranking-scroll-container" style="max-height: ${maxHeight}px; height: ${maxHeight}px; overflow-y: scroll; overflow-x: hidden; margin-bottom: 2rem; border: 1px solid #ddd; border-radius: 8px; background: white; scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch; touch-action: pan-y; overscroll-behavior: contain;">
+          <!-- Encabezado -->
+          <div style="display: grid; grid-template-columns: 0.8fr 3fr 1fr 1.5fr; gap: 10px; padding: 10px 15px 10px 15px; background: linear-gradient(135deg, #4ecdc4, #44a08d); border-radius: 8px 8px 0 0; font-weight: bold; color: white; font-size: 0.9rem; position: sticky; top: 0; z-index: 10;">
+            <div style="text-align: center;">Pos</div>
+            <div>Nick</div>
+            <div style="text-align: center;">Nivel</div>
+            <div style="text-align: right;">Caramelos</div>
+          </div>
+          
+          <!-- Lista de jugadores -->
+          ${ranking.map((user, index) => {
+            const position = index + 1;
+            const trophy = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+            const posDisplay = index < 3 ? trophy : position;
+            return `
+            <div style="display: grid; grid-template-columns: 0.8fr 3fr 1fr 1.5fr; gap: 10px; padding: 8px 15px 8px 15px; background: ${index % 2 === 0 ? '#ffffff' : '#f9f9f9'}; border-bottom: 1px solid #e0e0e0; font-size: 0.85rem; white-space: nowrap; ${index === ranking.length - 1 ? 'border-bottom: none; border-radius: 0 0 8px 8px;' : ''}">
+              <div style="text-align: center; color: #666; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${posDisplay}</div>
+              <div style="font-weight: 600; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                <span>${user.nick || 'Jugador'}</span>
+              </div>
+              <div style="text-align: center; color: #666; white-space: nowrap;">${user.bestLevel || 1}</div>
+              <div style="text-align: right; color: #666; white-space: nowrap;">${user.candiesTotal || 0} 🍬</div>
+            </div>`;
+          }).join('')}
+        </div>
+        
+        <div style="text-align: center;">
+          <button id="btn-close-game-ranking" class="btn-modal-play" style="background:#666; color:white; padding:10px 20px; font-size:1rem; border-radius:8px; border:none; cursor:pointer; margin-top: 0.5rem;">
+            Cerrar
+          </button>
+        </div>
+      </div>
+    `;
+    
+    showModal(`🏆 Ranking ${gameName}`, content);
+    
+    // Ocultar scrollbar pero mantener funcionalidad de scroll
+    const scrollContainer = content.querySelector('.ranking-scroll-container');
+    if (scrollContainer) {
+      const style = document.createElement('style');
+      style.textContent = `
+        .ranking-scroll-container::-webkit-scrollbar { width: 0px; background: transparent; }
+        .ranking-scroll-container { -ms-overflow-style: none; scrollbar-width: none; }
+      `;
+      document.head.appendChild(style);
+      // Evitar que el gesto de scroll burbujee al body en móviles
+      ['touchstart','touchmove'].forEach(evt => {
+        scrollContainer.addEventListener(evt, (e) => {
+          e.stopPropagation();
+        }, { passive: true });
+      });
+    }
+    
+    // Event listener para cerrar
+    document.getElementById('btn-close-game-ranking')?.addEventListener('click', () => {
+      hideModal();
+    });
+    return; // Salir temprano después de mostrar el ranking
+  } else {
+    // Para otros juegos, mostrar "próximamente"
+    content.innerHTML = `
+      <div style="text-align:center; padding:20px;">
+        <h2 style="font-size:2rem; margin-bottom:1rem;">${gameIcon} Ranking ${gameName}</h2>
+        <p style="margin-bottom:2rem; color:#666;">Próximamente disponible</p>
+        <p style="font-size:0.9rem; color:#888; margin-bottom:2rem;">
+          El ranking específico para ${gameName} estará disponible próximamente.
+        </p>
+        <button id="btn-close-game-ranking" class="btn-modal-play" style="background:#666; color:white; padding:10px 20px; font-size:1rem; border-radius:8px; border:none; cursor:pointer;">
+          Cerrar
+        </button>
+      </div>
+    `;
+  }
+  
+  showModal(`🏆 Ranking ${gameName}`, content);
+  
+  // Event listener para cerrar
+  document.getElementById('btn-close-game-ranking')?.addEventListener('click', () => {
+    hideModal();
+  });
+};
+
+// Función auxiliar para obtener información del edificio por tipo
+const getBuildingInfoByType = (type) => {
+  switch(type){
+    case 'school': return { type:'school', name:'Cole', icon:'🏫', description:'¡Salva a tus amigos de los demonios!', image:'img/juegos/colegio.png?v=1', recordKey:'cole', recordType:'nivel' };
+    case 'skate': return { type:'skate', name:'Skate Park', icon:'🛹', description:'¡Corre y salta con tu skate!', image:'img/juegos/skate.png?v=1', recordKey:'skate', recordType:'nivel' };
+    case 'gym': return { type:'gym',  name:'Pabellón', icon:'🏀', description:'¡Tiros a canasta!', image:'img/juegos/pabellon.png?v=1', recordKey:'pabellon', recordType:'nivel' };
+    case 'yayos': return { type:'yayos', name:'Casa Yayos', icon:'👴👵', description:'¡Dispara a las ratas!', image:'img/juegos/casayayos.png?v=1', recordKey:'yayos', recordType:'nivel' };
+    case 'informatica': return { type:'informatica', name:'Informática', icon:'💻', description:'¡Conecta los cables!', image:'img/juegos/informatica.png?v=1', recordKey:'informatica', recordType:'nivel' };
+    case 'edificio': return { type:'edificio', name:'Edificio', icon:'🏢', description:'¡Escala lo más alto!', image:'img/juegos/edificio.png?v=1', recordKey:'edificio', recordType:'m' };
+    case 'park': return { type:'park', name:'Parque', icon:'🎮', description:'¡Come las chuches y escapa de los demonios!', image:'img/juegos/parque.png?v=1', recordKey:'parque', recordType:'nivel' };
+    case 'tienda': return { type:'tienda', name:'Tienda', icon:'🛒', description:'¡Combina las frutas!', image:'img/juegos/tienda.png?v=1', recordKey:'tienda', recordType:'nivel' };
+    case 'rio': return { type:'rio', name:'Río', icon:'🌊', description:'¡Salta los troncos!', image:'img/juegos/rio.png?v=1', recordKey:'rio', recordType:'nivel' };
+    default: return { type:'unknown', name:'Lugar', icon:'🏠', description:'Un lugar del pueblo.', image:'img/casa.svg', recordKey:'', recordType:'' };
+  }
 };
 
 // Función auxiliar para cargar el ranking
@@ -957,3 +1532,6 @@ const loadRankingList = async () => {
   
   rankingDiv.innerHTML = html;
 };
+
+// Exportar función para uso en otros módulos
+export { showRankingModal };

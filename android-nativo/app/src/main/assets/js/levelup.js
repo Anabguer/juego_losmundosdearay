@@ -123,9 +123,9 @@ const showLevelUpAnimation = (newLevel) => {
     });
     
     // Reproducir sonido de nivel up
-    const audio = new Audio('assets/audio/ganar.mp3');
-    audio.volume = 0.7;
-    audio.play().catch(e => console.log('Audio no disponible'));
+    if (window.playAudioFile) {
+      window.playAudioFile('assets/audio/ganar.mp3', 0.7);
+    }
     
     // Vibrar para celebrar
     if (navigator.vibrate) {
@@ -142,8 +142,22 @@ const showLevelUpAnimation = (newLevel) => {
             overlay.parentNode.removeChild(overlay);
           }
         }, 500);
-      }, 1000); // Mostrar texto por 1 segundo adicional
+      }, 600); // Mostrar texto por 0.6 segundos adicionales después de la animación
     });
+    
+    // También remover después de un tiempo máximo (por si la animación falla o tarda mucho)
+    setTimeout(() => {
+      const existingOverlay = document.getElementById('levelup-overlay');
+      if (existingOverlay && existingOverlay.parentNode) {
+        existingOverlay.style.opacity = '0';
+        existingOverlay.style.transition = 'opacity 0.5s ease-out';
+        setTimeout(() => {
+          if (existingOverlay.parentNode) {
+            existingOverlay.parentNode.removeChild(existingOverlay);
+          }
+        }, 500);
+      }
+    }, 3000); // Máximo 3 segundos totales
   });
 };
 
@@ -187,6 +201,21 @@ const checkLevelUp = (currentScore, gameType) => {
   return currentLevel;
 };
 
+// Función para limpiar/ocultar la animación de nivel (útil al iniciar el juego)
+const hideLevelUpAnimation = () => {
+  const existingOverlay = document.getElementById('levelup-overlay');
+  if (existingOverlay) {
+    existingOverlay.style.opacity = '0';
+    existingOverlay.style.transition = 'opacity 0.3s ease-out';
+    setTimeout(() => {
+      if (existingOverlay.parentNode) {
+        existingOverlay.parentNode.removeChild(existingOverlay);
+      }
+    }, 300);
+  }
+};
+
 // Exportar funciones
 window.showLevelUpAnimation = showLevelUpAnimation;
+window.hideLevelUpAnimation = hideLevelUpAnimation;
 window.checkLevelUp = checkLevelUp;

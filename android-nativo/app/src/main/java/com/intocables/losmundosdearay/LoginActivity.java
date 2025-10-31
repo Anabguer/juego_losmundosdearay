@@ -37,14 +37,30 @@ public class LoginActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
 
         // Configurar Google Sign-In
+        String webClientId = getString(R.string.default_web_client_id);
+        Log.d("LoginActivity", "Web Client ID: " + webClientId);
+        
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(getString(R.string.default_web_client_id))
+                .requestIdToken(webClientId)
                 .requestEmail()
                 .build();
         googleSignInClient = GoogleSignIn.getClient(this, gso);
 
-        // Iniciar login automáticamente
-        signIn();
+        // Forzar cierre de sesión previa y mostrar selector de cuentas
+        forceSignIn();
+    }
+
+    private void forceSignIn() {
+        Log.d("LoginActivity", "🔑 Forzando selector de cuentas...");
+        
+        // Cerrar sesión de Google primero para forzar el selector
+        googleSignInClient.signOut().addOnCompleteListener(this, task -> {
+            Log.d("LoginActivity", "🔑 Sesión de Google cerrada, mostrando selector...");
+            
+            // Ahora mostrar el selector de cuentas
+            Intent signInIntent = googleSignInClient.getSignInIntent();
+            startActivityForResult(signInIntent, RC_SIGN_IN);
+        });
     }
 
     private void signIn() {
@@ -62,15 +78,14 @@ public class LoginActivity extends AppCompatActivity {
                 GoogleSignInAccount account = task.getResult(ApiException.class);
                 firebaseAuthWithGoogle(account.getIdToken());
             } catch (ApiException e) {
-                Toast.makeText(this, "Error en login: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                Log.e("LoginActivity", "Error en login - Código: " + e.getStatusCode() + ", Mensaje: " + e.getMessage());
+                Toast.makeText(this, "Error en login: " + e.getStatusCode() + " - " + e.getMessage(), Toast.LENGTH_LONG).show();
                 setResult(Activity.RESULT_CANCELED);
                 finish();
             }
         } else if (requestCode == 1002) { // NickSetupActivity
             if (resultCode == Activity.RESULT_OK) {
-                // Nick configurado correctamente, ir a ranking
-                Intent rankingIntent = new Intent(this, RankingActivity.class);
-                startActivity(rankingIntent);
+                // Nick configurado correctamente, regresar al pueblo
                 setResult(Activity.RESULT_OK);
                 finish();
             } else {
@@ -103,6 +118,8 @@ public class LoginActivity extends AppCompatActivity {
         Map<String, Object> userData = new HashMap<>();
         userData.put("nick", null);
         userData.put("candiesTotal", 0L); // Asegurar que sea Long, no int
+        userData.put("soundEnabled", true); // Preferencias de audio por defecto
+        userData.put("musicEnabled", true);
         userData.put("lastSeen", System.currentTimeMillis());
 
         Log.d("LoginActivity", "Buscando usuario en: apps/" + APP_ID + "/users/" + uid);
@@ -139,14 +156,19 @@ public class LoginActivity extends AppCompatActivity {
                                 Intent nickIntent = new Intent(this, NickSetupActivity.class);
                                 startActivityForResult(nickIntent, 1002);
                             } else {
-                                // Usuario completo - actualizar lastSeen y mostrar ranking
-                                Log.d("LoginActivity", "Usuario con nick - yendo a ranking...");
+                                // Usuario completo - actualizar lastSeen y regresar al pueblo
+                                Log.d("LoginActivity", "Usuario con nick - regresando al pueblo...");
                                 Map<String, Object> updateData = new HashMap<>();
                                 updateData.put("lastSeen", System.currentTimeMillis());
+                                
+                                // Asegurar que los campos de audio existan (para usuarios antiguos)
+                                Boolean soundEnabled = (Boolean) task.getResult().get("soundEnabled");
+                                Boolean musicEnabled = (Boolean) task.getResult().get("musicEnabled");
+                                if (soundEnabled == null) updateData.put("soundEnabled", true);
+                                if (musicEnabled == null) updateData.put("musicEnabled", true);
                                 db.collection("apps").document(APP_ID).collection("users").document(uid).update(updateData)
                                         .addOnSuccessListener(aVoid -> {
-                                            Intent rankingIntent = new Intent(this, RankingActivity.class);
-                                            startActivity(rankingIntent);
+                                            // Regresar al pueblo en lugar de ir al ranking
                                             setResult(Activity.RESULT_OK);
                                             finish();
                                         })

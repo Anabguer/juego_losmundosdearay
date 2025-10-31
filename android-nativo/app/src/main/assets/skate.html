@@ -8,9 +8,9 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="icon" href="assets/img/logo.png">
+  <link rel="icon" href="img/logo.png">
   <title>🛹 Skate Park - Skate</title>
-  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body class="game-skate">
   
@@ -19,7 +19,7 @@
     <a href="index.html" class="btn btn-outline btn-small">← Pueblo</a>
     <div class="hud-chips">
       <div class="chip">
-        <span class="chip-icon">📏</span>
+        <span class="chip-icon">⭐</span>
         <span id="hud-distance">Nivel 1</span>
       </div>
       <div class="chip">
@@ -38,21 +38,10 @@
       <canvas id="game-canvas"></canvas>
     </div>
     
-    <!-- Overlay inicial -->
-    <div class="game-overlay active" id="game-overlay">
+    <!-- Overlay para game over -->
+    <div class="game-overlay hidden" id="game-overlay">
       <div class="game-overlay-content">
-        <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem;">🛹 Skate Infinito</h2>
-        <p style="margin: 0 0 1rem 0; font-size: 0.9rem;">Salta los obstáculos y recoge estrellas</p>
-        <div class="game-stats" style="display: flex; justify-content: center; margin: 0.8rem 0;">
-          <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.8rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 120px;">
-            <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">NIVEL MÁS ALTO</div>
-            <div style="font-size: 1.8rem; font-weight: bold; color: white;" id="best-level">1</div>
-            <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor logrado</div>
-          </div>
-        </div>
-        <button class="btn btn-primary" id="btn-start" style="margin-top: 0.8rem; padding: 0.6rem 1.2rem; font-size: 1rem;">
-          Comenzar
-        </button>
+        <!-- Contenido se genera dinámicamente -->
       </div>
     </div>
   </main>

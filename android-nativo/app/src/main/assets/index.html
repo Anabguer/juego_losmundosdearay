@@ -6,16 +6,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no">
   <meta name="theme-color" content="#0e1320">
   <meta name="description" content="Los Mundos de Aray - Explora el pueblo navegable">
-  <link rel="icon" href="assets/img/logo.png">
+  <link rel="icon" href="img/logo.png">
   <title>🌟 Los Mundos de Aray</title>
-  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   
   <!-- Header / HUD -->
   <header class="game-header">
-    <img src="assets/img/logo.png" alt="Aray" class="game-logo">
+    <img src="img/logo.png" alt="Aray" class="game-logo">
     <div class="hud-stats">
+      <div class="user-nick" id="user-nick" style="display: none; font-size: 0.8rem; color: #333; font-weight: bold; margin-bottom: 0.2rem; text-align: center;"></div>
       <div class="stat-item candy-pill">
         <span class="stat-icon">🍬</span>
         <span class="stat-value" id="hud-coins">0</span>
@@ -29,14 +30,12 @@
       </div>
       
       <button class="btn-eat" id="btn-eat">
-        <img src="assets/img/comida.png" alt="Comer" class="btn-eat-icon">
+        <img src="img/comida.png" alt="Comer" class="btn-eat-icon">
       </button>
     </div>
   </header>
   
-  <!-- Texto guía -->
-  <div class="guide-text">¿Dónde vamos hoy?</div>
-  <div class="guide-subtitle">Elije lugar para explorar</div>
+  <!-- Texto guía eliminado -->
   
   <!-- Mapa del pueblo -->
   <main class="map-container">
@@ -53,27 +52,40 @@
   <!-- Scripts -->
   <script type="module">
         import { initMap } from './js/map.js';
-        import { getCoins, getEnergy } from './js/storage.js';
-        import { updateHUD, initCommonUI } from './js/ui.js?v=4';
+        import { getCoins, getEnergy, initAutoSync } from './js/storage.js';
+        import { updateHUD, initCommonUI } from './js/ui.js';
+        import './js/background-music.js';
     
     // Inicializar cuando el DOM esté listo
-    document.addEventListener('DOMContentLoaded', () => {
-      initCommonUI();
-      updateHUD();
-      initMap();
+    document.addEventListener('DOMContentLoaded', async () => {
+      console.log('🚀 DOM cargado, iniciando aplicación...');
+      
+      try {
+        // Inicializar sincronización automática PRIMERO
+        console.log('🔄 Inicializando sincronización automática...');
+        await initAutoSync();
+        console.log('✅ Sincronización automática inicializada');
+        
+        // Inicializar UI común
+        initCommonUI();
+        console.log('✅ initCommonUI() completado');
+        
+        // Actualizar HUD con datos sincronizados
+        updateHUD();
+        console.log('✅ updateHUD() completado');
+        
+        // Inicializar mapa
+        initMap();
+        console.log('✅ initMap() completado');
+        
+      } catch (error) {
+        console.error('❌ Error en inicialización:', error);
+      }
       
       // Detectar si estamos en Android (GameBridge disponible)
       if (window.GameBridge) {
         console.log('📱 Android detectado - GameBridge disponible');
-        // El bridge se encarga de la autenticación
-        
-        // Inicializar sincronización offline
-        import('./js/storage.js').then(module => {
-          if (module.initOfflineSync) {
-            module.initOfflineSync();
-            console.log('🔄 Sincronización offline inicializada');
-          }
-        });
+        console.log('🔄 Sincronización automática ya inicializada');
       } else {
         console.log('🌐 Web detectado - modo offline');
       }
@@ -82,13 +94,10 @@
   </script>
   
   <!-- Script de testing para progreso -->
-  <script src="js/test-progress.js"></script>
+  <!-- <script src="js/test-progress.js"></script> -->
   
   <!-- Script de testing para caramelos -->
-  <script src="js/test-candies.js"></script>
-  
-  <!-- Script de reset de datos -->
-  <script src="js/reset-data.js"></script>
+  <!-- <script src="js/test-candies.js"></script> -->
   
 </body>
 </html>

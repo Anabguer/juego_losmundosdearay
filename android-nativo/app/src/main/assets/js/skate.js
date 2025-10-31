@@ -2,8 +2,8 @@
    🛹 SKATE PARK - Skate Infinito
    ======================================== */
 
-import { getCandies, addCandies, getBestSkate, setBestSkate, saveScoreToServer } from './storage.js';
-import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js';
+import { getCandies, addCandies, getBestSkate, setBestSkate, saveScoreToServer, getBest, setBest } from './storage.js';
+import { initCommonUI, updateHUD, toast, playSound, playAudioFile, vibrate, celebrateCandyEarned } from './ui.js';
 
 // Canvas y contexto
 let canvas, ctx, dpr;
@@ -14,15 +14,15 @@ const runSprites = [
   new Image()
 ];
 // Solo usar run1 para ambos (más estable)
-runSprites[0].src = 'assets/img/personaje/aray_run1.png?v=2';
-runSprites[1].src = 'assets/img/personaje/aray_run1.png?v=2';
+runSprites[0].src = 'img/personaje/aray_run1.png?v=2';
+runSprites[1].src = 'img/personaje/aray_run1.png?v=2';
 
 // Sprites de mamá (obstáculos) - SIN mama_base
 const mamaNames = ['enfadada', 'bocata', 'comida', 'abrigo', 'tareas'];
 const mamaSprites = [];
 mamaNames.forEach(name => {
   const img = new Image();
-  img.src = `assets/img/personaje_mama/mama_${name}.png`;
+  img.src = `img/personaje_mama/mama_${name}.png`;
   img.onerror = () => console.warn(`⚠️ No se pudo cargar: mama_${name}.png`);
   img.onload = () => console.log(`✅ Cargada: mama_${name}.png`);
   mamaSprites.push(img);
@@ -105,9 +105,55 @@ const resizeCanvas = () => {
   }
 };
 
+// Sincronizar nivel más alto obtenido entre localStorage y Firebase
+const syncBestLevel = async () => {
+  try {
+    // Para invitados, solo usar localStorage
+    const localBestLevel = await getBestSkate() || 1;
+    
+    // Solo sincronizar con Firebase si hay usuario logueado
+    if (window.GameBridge && window.GameBridge.isUserLoggedIn && window.GameBridge.isUserLoggedIn()) {
+      let firebaseBestLevel = 1;
+      try {
+        // Usar getBest de storage.js para evitar conflictos de window.onBestLevelReceived
+        firebaseBestLevel = await getBest('skate');
+        firebaseBestLevel = parseInt(firebaseBestLevel) || 1;
+        console.log(`📥 Nivel Firebase obtenido via storage.js en syncBestLevel: ${firebaseBestLevel}`);
+        
+        // Usar el mayor de los dos
+        const bestLevel = Math.max(localBestLevel, firebaseBestLevel);
+        
+        // Guardar usando setBestSkate (que guarda en losmundosdearay_progress)
+        // No hace falta localStorage.setItem porque setBest ya lo hace
+        if (window.GameBridge && window.GameBridge.setBestLevel) {
+          await setBest('skate', bestLevel);
+        }
+        
+        console.log(`📊 Nivel más alto sincronizado: ${bestLevel} (local: ${localBestLevel}, firebase: ${firebaseBestLevel})`);
+        return bestLevel;
+      } catch (error) {
+        console.warn('⚠️ Error obteniendo nivel de Firebase via storage.js en syncBestLevel:', error);
+        return localBestLevel;
+      }
+    } else {
+      // Para invitados, solo devolver el nivel local
+      console.log(`📊 Nivel local para invitado: ${localBestLevel}`);
+      return localBestLevel;
+    }
+  } catch (error) {
+    console.warn('⚠️ Error sincronizando nivel más alto:', error);
+    return 1;
+  }
+};
+
 // Inicializar juego
 const initGame = () => {
   console.log('🎮 Iniciando Runner...');
+  
+  // Limpiar animación de nivel si existe
+  if (typeof window !== 'undefined' && typeof window.hideLevelUpAnimation === 'function') {
+    window.hideLevelUpAnimation();
+  }
   
   if (!canvas || !ctx) {
     console.error('❌ Canvas no disponible');
@@ -116,7 +162,7 @@ const initGame = () => {
   
   // Reset estado
   state.distance = 0;
-  state.level = 1;
+  state.level = 1; // El juego siempre empieza en nivel 1
   state.speed = state.baseSpeed;
   state.isJumping = false;
   state.jumpVelocity = 0;
@@ -321,6 +367,7 @@ const gameLoop = () => {
     addCandies(1);
     celebrateCandyEarned();
     
+    // Mostrar animación de nivel
     if (typeof window !== 'undefined' && typeof window.showLevelUpAnimation === 'function') {
       window.showLevelUpAnimation(state.level);
     }
@@ -369,9 +416,7 @@ const jump = () => {
     state.doubleJumpAvailable = true; // Activar doble salto
     state.velocityY = state.impulso;
     
-    const audio = new Audio('assets/audio/salto.mp3');
-    audio.volume = 0.5;
-    audio.play().catch(e => console.log('Audio no disponible'));
+    playAudioFile('audio/salto.mp3', 0.5);
     vibrate(10);
   }
   // DOBLE SALTO en el aire
@@ -379,9 +424,7 @@ const jump = () => {
     state.velocityY = state.impulso * 0.8; // Segundo salto un poco más débil
     state.doubleJumpAvailable = false; // Solo un doble salto
     
-    const audio = new Audio('assets/audio/salto.mp3');
-    audio.volume = 0.5;
-    audio.play().catch(e => console.log('Audio no disponible'));
+    playAudioFile('audio/salto.mp3', 0.5);
     vibrate(10);
   }
 };
@@ -401,7 +444,7 @@ const spawnObstacle = () => {
   
   state.obstacles.push({
     x: width + 10,
-    y: config.groundY - height + 20, // Bajar Mama 20px para que esté más en el suelo
+    y: config.groundY - height + 20, // Mama exactamente a la misma altura que el niño
     width: config.obstacleWidth,
     height: height,
     image: hasImage ? mamaImg : null,
@@ -507,9 +550,7 @@ const updateCoins = (deltaTime) => {
       console.log(`⭐ Estrella ${state.starsCollected} recogida`);
       
       // Sonido de estrella
-      const audio = new Audio('assets/audio/estrella.mp3');
-      audio.volume = 0.5;
-      audio.play().catch(e => console.log('Audio no disponible'));
+      playAudioFile('audio/estrella.mp3', 0.5);
       
       // Dar golosina cada 10 estrellas (excepción a la regla)
       if (state.starsCollected % 10 === 0) {
@@ -639,9 +680,7 @@ const endGame = async () => {
   cancelAnimationFrame(animationId);
   
   // Sonido de perder
-  const audio = new Audio('assets/audio/perder.mp3');
-  audio.volume = 0.5;
-  audio.play().catch(e => console.log('Audio no disponible'));
+  playAudioFile('audio/perder.mp3', 0.5);
   
   vibrate([200, 100, 200]);
   
@@ -651,15 +690,34 @@ const endGame = async () => {
   
   console.log('📊 Distancia:', finalDistance, 'Récord:', bestDistance);
   
-  if (isNewRecord) {
-    await setBestSkate(finalDistance);
-    await saveScoreToServer('skate', finalDistance, { distance: finalDistance, candies: getCandies() });
+  // Obtener el mejor nivel actual desde losmundosdearay_progress (estructura nueva)
+  let currentBestLevel = await getBestSkate() || 1;
+  
+  // Si está logueado, sincronizar con Firebase
+  if (window.GameBridge && window.GameBridge.getBestLevel) {
+    try {
+      // Usar getBest de storage.js para evitar conflictos de window.onBestLevelReceived
+      const firebaseBestLevel = await getBest('skate');
+      const numericLevel = parseInt(firebaseBestLevel) || 1;
+      console.log(`📥 Nivel Firebase obtenido via storage.js en endGame: ${numericLevel}`);
+      // Usar el mayor entre local y Firebase
+      currentBestLevel = Math.max(currentBestLevel, numericLevel);
+      console.log(`📊 Mejor nivel sincronizado en endGame: ${currentBestLevel}`);
+    } catch (error) {
+      console.warn('⚠️ Error obteniendo mejor nivel desde Firebase via storage.js en endGame:', error);
+    }
   }
   
-  // Guardar mejor nivel
-  const bestLevel = localStorage.getItem('aray_best_level_skate') || 1;
-  if (state.level > bestLevel) {
-    localStorage.setItem('aray_best_level_skate', state.level);
+  console.log(`📊 Comparando nivel actual (${state.level}) vs mejor nivel (${currentBestLevel})`);
+  
+  // Guardar nivel si es récord
+  if (isNewRecord) {
+    console.log(`🎉 ¡Nuevo récord de nivel! ${currentBestLevel} → ${state.level}`);
+    // setBestSkate() ya guarda en losmundosdearay_progress, no hace falta localStorage.setItem()
+    await setBestSkate(state.level);  // ← GUARDAR NIVEL, NO DISTANCIA
+    await saveScoreToServer('skate', state.level, { level: state.level, distance: finalDistance, candies: getCandies() });
+  } else {
+    console.log(`📊 Nivel ${state.level} no supera el récord actual (${currentBestLevel})`);
   }
   
   const overlay = document.getElementById('game-overlay');
@@ -673,6 +731,27 @@ const endGame = async () => {
   const content = overlay.querySelector('.game-overlay-content');
   console.log('🔍 Content encontrado:', content);
   
+  // Obtener el mejor nivel real desde Firebase usando storage.js (evita conflictos de callback)
+  let finalBestLevel = 1;
+  if (window.GameBridge && window.GameBridge.getBestLevel) {
+    try {
+      // Usar getBest de storage.js para evitar conflictos de window.onBestLevelReceived
+      const firebaseLevel = await getBest('skate');
+      finalBestLevel = parseInt(firebaseLevel) || 1;
+      console.log(`🔍 Modal - Mejor nivel desde Firebase via storage.js: ${finalBestLevel}`);
+    } catch (error) {
+      console.warn('⚠️ Error obteniendo nivel de Firebase via storage.js en modal:', error);
+      finalBestLevel = parseInt(localStorage.getItem('aray_best_skate')) || 1;
+    }
+  } else {
+    finalBestLevel = parseInt(localStorage.getItem('aray_best_skate')) || 1;
+    console.log(`🔍 Modal - Mejor nivel desde localStorage (fallback): ${finalBestLevel}`);
+  }
+  
+  // Debug: verificar valores antes de renderizar el modal
+  console.log(`🔍 DEBUG Modal - state.level: ${state.level}, finalBestLevel: ${finalBestLevel}`);
+  console.log(`🔍 DEBUG Modal - Math.max(${state.level}, ${finalBestLevel}) = ${Math.max(state.level, finalBestLevel)}`);
+  
   content.innerHTML = `
     <h2 style="margin: 0 0 0.8rem 0; font-size: 1.4rem;">💥 Chocaste</h2>
     <div class="game-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 0.8rem 0;">
@@ -684,7 +763,7 @@ const endGame = async () => {
       <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3);">
         <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">NIVEL</div>
         <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.level}</div>
-        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.level, parseInt(localStorage.getItem('aray_best_level_skate')) || 1)}</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.level, finalBestLevel)}</div>
       </div>
     </div>
     <div style="display: flex; justify-content: center; margin-top: 0.8rem;">
@@ -692,14 +771,22 @@ const endGame = async () => {
     </div>
   `;
   
-  // Asegurar que el overlay se muestre
+  // Asegurar que el overlay se muestre pero NO tape el header
+  const headerHeight = 60; // Altura fija del header
+  
   console.log('👁️ Mostrando overlay...');
   overlay.classList.remove('hidden');
   overlay.classList.add('active');
-  overlay.style.visibility = 'visible'; // FORZAR visibilidad
+  overlay.style.visibility = 'visible';
   overlay.style.display = 'flex';
   overlay.style.opacity = '1';
   overlay.style.pointerEvents = 'all';
+  overlay.style.position = 'absolute';
+  overlay.style.inset = `${headerHeight}px 0px 0px`;
+  overlay.style.width = '100%';
+  overlay.style.height = `calc(100% - ${headerHeight}px)`;
+  overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.75)';
+  overlay.style.zIndex = '999';
   console.log('✅ Overlay mostrado:', overlay.className);
   
   document.getElementById('btn-restart')?.addEventListener('click', () => {
@@ -710,7 +797,6 @@ const endGame = async () => {
     }, 100);
   });
   
-  // Botón Pueblo eliminado - solo queda Reintentar
 };
 
 // Control táctil / teclado
@@ -733,12 +819,25 @@ const setupControls = () => {
 };
 
 // Actualizar HUD
+// Cache para evitar llamadas excesivas a getCandies
+let cachedCandies = 0;
+let lastCandiesUpdate = 0;
+
 const updateGameHUD = () => {
   const distEl = document.getElementById('hud-distance');
   const candiesEl = document.getElementById('hud-candies');
   
   if (distEl) distEl.textContent = `Nivel ${state.level}`;
-  if (candiesEl) candiesEl.textContent = getCandies();
+  
+  // Solo actualizar caramelos cada 2 segundos para evitar spam
+  const now = Date.now();
+  if (candiesEl && (now - lastCandiesUpdate > 2000)) {
+    cachedCandies = getCandies();
+    candiesEl.textContent = cachedCandies;
+    lastCandiesUpdate = now;
+  } else if (candiesEl) {
+    candiesEl.textContent = cachedCandies;
+  }
   // hud-speed eliminado del HTML
 };
 
@@ -765,7 +864,7 @@ window.addEventListener('orientationchange', () => {
 });
 
 // Configuración FINAL de posición vertical de Aray
-window.groundYOffset = 250; // Valor óptimo tras ajustes
+window.groundYOffset = 220; // Subido un poco para mejor posición
 
 // Mensajes graciosos de Mama que aparecen por el cielo
 const MAMA_MESSAGES = [
@@ -812,9 +911,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log('🎮 Controles configurando...');
   setupControls();
   
+  // Sincronizar nivel más alto obtenido
+  const bestLevel = await syncBestLevel();
+  
   // Mostrar stats iniciales
   const bestDist = await getBestSkate();
-  const bestLevel = localStorage.getItem('aray_best_level_skate') || 1;
   
   console.log('📊 Stats:', { bestDist, bestLevel });
   
@@ -829,41 +930,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     bestLevelEl.textContent = bestLevel;
   }
   
-  // Botón start
-  const btnStart = document.getElementById('btn-start');
+  // Iniciar el juego automáticamente
+  console.log('🚀 Iniciando juego automáticamente...');
+  setTimeout(() => {
+    console.log('⏰ InitGame ejecutándose...');
+    initGame();
+  }, 500); // Pequeño delay para asegurar que todo esté cargado
   
-  if (!btnStart) {
-    console.error('❌ No se encontró el botón btn-start');
-    return;
-  }
-  
-  console.log('✅ Botón START encontrado');
-  
-  btnStart.addEventListener('click', (e) => {
-    console.log('🎯 CLICK EN START!');
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const overlay = document.getElementById('game-overlay');
-    if (overlay) {
-      console.log('🚫 Ocultando overlay...');
-      overlay.style.display = 'none';
-      overlay.style.visibility = 'hidden';
-      overlay.style.opacity = '0';
-      overlay.style.pointerEvents = 'none';
-      overlay.classList.remove('active');
-      overlay.classList.add('hidden');
-    }
-    
-    playSound('click');
-    
-    console.log('🚀 Llamando a initGame AHORA...');
-    setTimeout(() => {
-      console.log('⏰ InitGame ejecutándose...');
-      initGame();
-    }, 100);
-  }, { capture: true }); // Capture para tener prioridad
-  
-  console.log('✅ Parque cargado completamente');
+  console.log('✅ Skate cargado completamente');
 });
+
+// Exportar función de inicialización
+export { initGame };
 

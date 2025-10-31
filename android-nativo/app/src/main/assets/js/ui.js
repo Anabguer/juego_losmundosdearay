@@ -56,9 +56,24 @@ export const toast = (message, duration = 2500) => {
 };
 
 // === Modal robusta sin dependencias ===
-export function showModal(title, contentNode) {
-  // elimina una anterior si existe
-  hideModal();
+export function showModal(title, contentNode, addToStack = true) {
+  // Si addToStack es true, guardar el modal actual en el stack antes de mostrar el nuevo
+  if (addToStack) {
+    const currentModal = document.getElementById('modal-root');
+    if (currentModal) {
+      const currentTitle = currentModal.querySelector('h2')?.textContent || '';
+      const currentContent = currentModal.querySelector('.modal-content')?.cloneNode(true);
+      if (currentContent) {
+        modalStack.push({ title: currentTitle, content: currentContent });
+        console.log('📚 Modal guardado en stack:', currentTitle);
+      }
+    }
+  }
+  
+  // elimina una anterior si existe (sin manejar stack)
+  const existingRoot = document.getElementById('modal-root');
+  if (existingRoot) existingRoot.remove();
+  window.removeEventListener('keydown', escCloser);
 
   const root = document.createElement('div');
   root.id = 'modal-root';
@@ -74,11 +89,13 @@ export function showModal(title, contentNode) {
     box-shadow: 0 20px 60px rgba(0,0,0,.3); color: #333;
   `;
   card.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom: 10px;">
       <h2 style="margin:0; font-size:20px; font-weight:900; color:#333;">${title || ''}</h2>
       <button id="modal-x" class="btn btn-outline" style="padding:0 !important; color:#d900ff; font-weight:900; font-size:1.2rem; width:24px !important; height:24px !important; border-radius:50% !important; display:flex !important; align-items:center !important; justify-content:center !important; min-width:24px !important; max-width:24px !important; border:none !important; background:rgba(255,255,255,0.25) !important;">✕</button>
     </div>
   `;
+  // Agregar clase modal-content al contenido
+  contentNode.classList.add('modal-content');
   card.appendChild(contentNode);
   root.appendChild(card);
   document.body.appendChild(root);
@@ -90,13 +107,167 @@ export function showModal(title, contentNode) {
 
   // Esc para cerrar
   window.addEventListener('keydown', escCloser);
+  
+  // Asegurar que el avatar del pueblo esté oculto cuando se muestra cualquier modal
+  setTimeout(() => {
+    const avatar = document.querySelector('.avatar');
+    if (avatar) {
+      avatar.style.display = 'none';
+      avatar.style.visibility = 'hidden';
+      avatar.style.opacity = '0';
+      avatar.style.pointerEvents = 'none';
+      avatar.style.zIndex = '-1';
+    }
+  }, 10);
 }
 function escCloser(e){ if(e.key==='Escape') hideModal(); }
+
+// Stack de modales para manejar modales apilados
+let modalStack = [];
+
+// Función para restaurar event listeners específicos del modal
+function restoreModalEventListeners(modalTitle) {
+  console.log('🔄 Restaurando event listeners para:', modalTitle);
+  
+  // Si es un modal de juego (contiene botón modal-play-btn)
+  const playBtn = document.getElementById('modal-play-btn');
+  if (playBtn) {
+    console.log('🎮 Restaurando botón JUGAR AHORA');
+    playBtn.addEventListener('click', (event) => {
+      // Obtener la ruta ANTES de cerrar el modal
+      const gameRoute = event.target.getAttribute('data-game-route') || 'skate.html';
+      console.log(`🎮 Navegando a: ${gameRoute}`);
+      
+      try { hideModal(); } catch(e) {
+        const mr=document.getElementById('modal-root'); if(mr) mr.remove();
+      }
+      playSound('click');
+      
+      // Notificar que se va a jugar un juego (para anuncios)
+      if (window.GameBridge && window.GameBridge.onGamePlayed) {
+        try {
+          window.GameBridge.onGamePlayed();
+        } catch(e) {
+          console.log('Error en GameBridge.onGamePlayed:', e);
+        }
+      }
+      
+      // Navegar a la página HTML del juego
+      window.location.href = gameRoute;
+    });
+  }
+  
+  // Si es un modal de ranking (contiene botón btn-ranking-modal)
+  const rankingBtn = document.getElementById('btn-ranking-modal');
+  if (rankingBtn) {
+    console.log('🏆 Restaurando botón RANKING');
+    rankingBtn.addEventListener('click', async () => {
+      playSound('click');
+      // Obtener información del juego desde el botón
+      const gameType = rankingBtn.getAttribute('data-game-type') || 'skate';
+      const gameName = rankingBtn.getAttribute('data-game-name') || 'Skate Park';
+      
+      // Verificar que la función esté disponible
+      if (window.showGameRankingModal) {
+        await window.showGameRankingModal(gameType, gameName);
+      } else {
+        console.error('❌ showGameRankingModal no está disponible');
+      }
+    });
+  }
+  
+  // Si es un modal de ranking específico (contiene botón btn-close-game-ranking)
+  const closeRankingBtn = document.getElementById('btn-close-game-ranking');
+  if (closeRankingBtn) {
+    console.log('❌ Restaurando botón CERRAR ranking');
+    closeRankingBtn.addEventListener('click', () => {
+      hideModal();
+    });
+  }
+}
 
 export function hideModal() {
   const root = document.getElementById('modal-root');
   if (root) root.remove();
   window.removeEventListener('keydown', escCloser);
+  
+  // Si hay modales en el stack, mostrar el anterior
+  if (modalStack.length > 0) {
+    const previousModal = modalStack.pop();
+    console.log('📚 Restaurando modal desde stack:', previousModal.title);
+    
+    // Crear el modal anterior directamente sin usar showModal para evitar recursión
+    const newRoot = document.createElement('div');
+    newRoot.id = 'modal-root';
+    newRoot.style.cssText = `
+      position: fixed; inset: 0; background: rgba(0,0,0,.45);
+      display: flex; align-items: center; justify-content: center; z-index: 9999;
+    `;
+
+    const card = document.createElement('div');
+    card.style.cssText = `
+      width: min(520px, 92vw);
+      background: #fff; border-radius: 16px; padding: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.3); color: #333;
+    `;
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+        <h2 style="margin:0; font-size:20px; font-weight:900; color:#333;">${previousModal.title || ''}</h2>
+        <button id="modal-x" class="btn btn-outline" style="padding:0 !important; color:#d900ff; font-weight:900; font-size:1.2rem; width:24px !important; height:24px !important; border-radius:50% !important; display:flex !important; align-items:center !important; justify-content:center !important; min-width:24px !important; max-width:24px !important; border:none !important; background:rgba(255,255,255,0.25) !important;">✕</button>
+      </div>
+    `;
+    card.appendChild(previousModal.content);
+    newRoot.appendChild(card);
+    document.body.appendChild(newRoot);
+
+    document.getElementById('modal-x')?.addEventListener('click', hideModal);
+    newRoot.addEventListener('click', (e)=>{
+      if (e.target === newRoot) hideModal();
+    });
+    window.addEventListener('keydown', escCloser);
+    
+    // Restaurar event listeners específicos del modal
+    restoreModalEventListeners(previousModal.title);
+    
+    // Ocultar avatar
+    setTimeout(() => {
+      const avatar = document.querySelector('.avatar');
+      if (avatar) {
+        avatar.style.display = 'none';
+        avatar.style.visibility = 'hidden';
+        avatar.style.opacity = '0';
+        avatar.style.pointerEvents = 'none';
+        avatar.style.zIndex = '-1';
+      }
+    }, 10);
+    
+    return;
+  }
+  
+  // Restaurar el avatar del pueblo cuando se cierra el modal
+  const avatar = document.querySelector('.avatar');
+  if (avatar) {
+    avatar.style.display = 'block';
+    avatar.style.visibility = 'visible';
+    avatar.style.opacity = '1';
+    console.log('✅ Avatar del pueblo restaurado al cerrar modal');
+    
+    // Actualizar posición del avatar después de restaurarlo
+    setTimeout(() => {
+      // Intentar importar y llamar updateAvatarPosition si existe
+      import('./map.js').then(module => {
+        if (module.updateAvatarPosition) {
+          module.updateAvatarPosition();
+          console.log('🔄 Posición del avatar actualizada al cerrar modal');
+        }
+      }).catch(() => {
+        // Si no se puede importar, intentar llamar a la función global
+        if (window.updateAvatarPosition) {
+          window.updateAvatarPosition();
+        }
+      });
+    }, 100);
+  }
 }
 
 // ========== EFECTO GOLOSINA GANADA ==========
@@ -177,16 +348,91 @@ export const confirmModal = (message, onConfirm) => {
 };
 
 // ========== ACTUALIZAR HUD ==========
+// Throttling global para updateHUD
+let lastHUDUpdate = 0;
+const HUD_UPDATE_INTERVAL = 500; // Actualizar HUD cada 500ms máximo
+
 export const updateHUD = () => {
+  const now = Date.now();
+  
+  // Solo actualizar si ha pasado suficiente tiempo
+  if (now - lastHUDUpdate < HUD_UPDATE_INTERVAL) {
+    return;
+  }
+  
+  lastHUDUpdate = now;
+  
   const coinsEl = document.getElementById('hud-coins');
+  const candiesEl = document.getElementById('hud-candies');
   const energyEl = document.getElementById('hud-energy');
   const hungerBarEl = document.getElementById('hunger-bar-fill');
+  const userNickEl = document.getElementById('user-nick');
   
-  if (coinsEl) {
-    // Usar getCandies() para obtener los caramelos correctos (Android o Web)
-    const candies = getCandies();
-    console.log('🎨 updateHUD() - caramelos obtenidos:', candies);
-    coinsEl.textContent = formatNumber(candies);
+  // Mostrar nick del usuario si está logueado
+  if (userNickEl) {
+    let userNick = null;
+    
+        // Intentar obtener nick desde GameBridge
+        if (window.GameBridge && window.GameBridge.getUser) {
+          try {
+            const userDataStr = window.GameBridge.getUser();
+            if (userDataStr) {
+              const userData = JSON.parse(userDataStr);
+              if (userData && userData.nick) {
+                userNick = userData.nick;
+                // Guardar en localStorage para futuras referencias
+                localStorage.setItem('user_nick', userNick);
+                console.log('👤 Nick obtenido desde GameBridge:', userNick);
+              }
+            }
+          } catch (error) {
+            console.log('Error obteniendo nick del usuario desde GameBridge:', error);
+          }
+        }
+    
+    // Si no se obtuvo desde GameBridge, intentar desde localStorage
+    if (!userNick) {
+      userNick = localStorage.getItem('user_nick');
+    }
+    
+    // Mostrar nick o "Invitado"
+    if (userNick) {
+      userNickEl.textContent = userNick;
+      userNickEl.style.display = 'block';
+      console.log('👤 Nick mostrado:', userNick);
+    } else {
+      // Verificar si el usuario está logueado
+      const isLoggedIn = window.GameBridge && window.GameBridge.isUserLoggedIn ? window.GameBridge.isUserLoggedIn() : false;
+      if (isLoggedIn) {
+        userNickEl.textContent = 'Usuario';
+        userNickEl.style.display = 'block';
+        console.log('👤 Usuario logueado sin nick - mostrando "Usuario"');
+      } else {
+        userNickEl.textContent = 'Invitado';
+        userNickEl.style.display = 'block';
+        console.log('👤 Usuario no logueado - mostrando "Invitado"');
+      }
+    }
+  }
+  
+  const updateCandiesValue = () => {
+    // Cache para evitar llamadas excesivas a getCandies()
+    const now = Date.now();
+    if (!window.lastCandiesUpdate || (now - window.lastCandiesUpdate > 2000)) {
+      window.cachedCandies = getCandies();
+      window.lastCandiesUpdate = now;
+      // Solo loggear ocasionalmente para evitar spam
+      if (Math.random() < 0.1) { // 10% de probabilidad
+        console.log('🎨 updateHUD() - caramelos obtenidos:', window.cachedCandies);
+      }
+    }
+    const formatted = formatNumber(window.cachedCandies || 0);
+    if (coinsEl) coinsEl.textContent = formatted;
+    if (candiesEl) candiesEl.textContent = formatted;
+  };
+
+  if (coinsEl || candiesEl) {
+    updateCandiesValue();
   }
   
   const currentEnergy = getEnergy();
@@ -223,7 +469,10 @@ export const formatNumber = (num) => {
 
 // ========== SONIDOS (SIMPLE) ==========
 let audioContext;
-let audioEnabled = true;
+let audioEnabled = null; // null hasta que se carguen desde Firebase
+let backgroundMusic = null;
+let musicEnabled = null; // null hasta que se carguen desde Firebase
+let audioPreferencesLoaded = false; // Flag para saber si ya se cargaron las preferencias
 
 const initAudio = () => {
   if (!audioContext) {
@@ -236,8 +485,40 @@ const initAudio = () => {
   }
 };
 
+// Función helper para reproducir archivos de audio con verificación de preferencias
+export const playAudioFile = (path, volume = 0.5) => {
+  // Verificar si el audio está habilitado
+  if (window.audioEnabled === null || window.audioEnabled === undefined) {
+    return;
+  }
+  
+  if (!window.audioEnabled) {
+    return; // Audio desactivado, no reproducir
+  }
+  
+  try {
+    const audio = new Audio(path);
+    audio.volume = volume;
+    audio.play().catch(e => {
+      // Solo loggear errores reales, no cuando simplemente está desactivado
+      if (window.audioEnabled) {
+        console.log('Audio no disponible:', path, e);
+      }
+    });
+  } catch (e) {
+    console.warn('Error reproduciendo audio:', path, e);
+  }
+};
+
 export const playSound = (type = 'click') => {
-  if (!audioEnabled) return;
+  if (window.audioEnabled === null || window.audioEnabled === undefined) {
+    console.log('🔇 Preferencias de audio no cargadas aún, no reproduciendo:', type);
+    return;
+  }
+  
+  if (!window.audioEnabled) {
+    return; // Audio desactivado, no reproducir
+  }
   
   initAudio();
   if (!audioContext) return;
@@ -284,17 +565,123 @@ export const playSound = (type = 'click') => {
         break;
         
       case 'win':
-        // Reproducir archivo de audio real
+        // Reproducir archivo de audio real usando la función helper
         oscillator.disconnect();
         gainNode.disconnect();
-        const audio = new Audio('assets/audio/match3.mp3');
-        audio.volume = 0.5;
-        audio.play().catch(e => console.log('Audio no disponible'));
+        playAudioFile('assets/audio/match3.mp3', 0.5);
         return; // Salir sin usar el oscillator
+        
+      case 'rat_escape':
+        // Sonido de rata escapando (usar función helper)
+        oscillator.disconnect();
+        gainNode.disconnect();
+        playAudioFile('audio/perder.mp3', 0.6);
+        return;
     }
   } catch (e) {
     console.warn('Error reproduciendo sonido:', e);
   }
+};
+
+// ========== MÚSICA DE FONDO ==========
+export const initBackgroundMusic = () => {
+  if (!backgroundMusic) {
+    backgroundMusic = new Audio('audio/background.mp3');
+    backgroundMusic.loop = true;
+    backgroundMusic.volume = 0.3; // Volumen bajo para no molestar
+    backgroundMusic.preload = 'auto';
+    
+    // NO reproducir automáticamente - esperar a que se carguen las preferencias
+    console.log('🎵 BackgroundMusic inicializado, esperando preferencias...');
+  }
+};
+
+export const playBackgroundMusic = () => {
+  console.log('🎵 playBackgroundMusic() - musicEnabled:', window.musicEnabled);
+  
+  // Verificar si la música está habilitada (verificar tanto window.musicEnabled como localStorage)
+  const musicEnabled = window.musicEnabled !== false && 
+                       localStorage.getItem('musicEnabled') !== 'false' &&
+                       localStorage.getItem('musicEnabled') !== null;
+  
+  if (!musicEnabled) {
+    console.log('🔇 Música deshabilitada - no reproducir');
+    // Asegurar que esté pausada si está deshabilitada
+    if (backgroundMusic && !backgroundMusic.paused) {
+      backgroundMusic.pause();
+    }
+    return;
+  }
+  
+  // Verificar si la página está visible
+  if (document.hidden) {
+    console.log('🔇 Página oculta, no reproducir música');
+    return;
+  }
+  
+  // Inicializar si no existe
+  if (!backgroundMusic) {
+    console.log('🎵 Inicializando backgroundMusic...');
+    initBackgroundMusic();
+  }
+  
+  if (backgroundMusic) {
+    console.log('🎵 Reproduciendo música...');
+    backgroundMusic.play().then(() => {
+      console.log('✅ Música iniciada');
+    }).catch(e => {
+      console.error('❌ Error reproduciendo música:', e.message);
+    });
+  }
+};
+
+export const stopBackgroundMusic = () => {
+  console.log('🔇 stopBackgroundMusic() llamado');
+  
+  // Si backgroundMusic no está inicializado, intentar inicializarlo primero
+  if (!backgroundMusic) {
+    console.log('🔇 backgroundMusic no está inicializado, inicializando...');
+    initBackgroundMusic();
+  }
+  
+  if (backgroundMusic) {
+    console.log('🔇 Deteniendo música de fondo...');
+    // Guardar el tiempo actual para poder reanudar desde ahí si se pausa (no resetear a 0)
+    if (!window._musicPausedAt && !backgroundMusic.paused) {
+      window._musicPausedAt = backgroundMusic.currentTime;
+    }
+    backgroundMusic.pause();
+    console.log('🔇 Música de fondo pausada');
+  } else {
+    console.log('❌ No se pudo inicializar backgroundMusic');
+  }
+};
+
+export const setMusicEnabled = (enabled) => {
+  console.log('🎵 setMusicEnabled() llamado con:', enabled);
+  
+  // Actualizar variables globales inmediatamente
+  window.musicEnabled = enabled;
+  
+  console.log('🎵 Variables actualizadas - musicEnabled:', window.musicEnabled);
+  
+  // Guardar usando la función adaptada de MemoFlip
+  saveAudioSettings(window.audioEnabled, enabled);
+  
+  // Aplicar cambios de música inmediatamente
+  if (enabled) {
+    console.log('🎵 Activando música de fondo...');
+    if (window.playBackgroundMusic) {
+      window.playBackgroundMusic();
+    }
+  } else {
+    console.log('🔇 Desactivando música de fondo...');
+    if (window.stopBackgroundMusic) {
+      window.stopBackgroundMusic();
+    }
+  }
+  
+  console.log('🎵 Música de fondo:', enabled ? 'Activada' : 'Desactivada');
 };
 
 // ========== VIBRACIÓN ==========
@@ -363,6 +750,369 @@ if (typeof window !== 'undefined') {
   });
 }
 
+// ========== MODAL DE AJUSTES ==========
+export const showSettingsModal = () => {
+  // Crear modal de ajustes
+  const modal = document.createElement('div');
+  modal.id = 'settings-modal';
+  modal.className = 'modal-overlay';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+  `;
+  
+  const content = document.createElement('div');
+  content.className = 'modal-content';
+  content.style.cssText = `
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    color: #333;
+  `;
+  
+  content.innerHTML = `
+    <h2 style="margin: 0 0 1rem 0; font-size: 1.5rem; color: #333;">⚙️ Ajustes</h2>
+    
+    <div style="margin: 1.5rem 0;">
+      <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem; color: #555;">🔊 Sonido</h3>
+      <label style="display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; margin-bottom: 0.5rem;">
+        <input type="checkbox" id="sound-toggle" style="transform: scale(1.2);">
+        <span>Activar sonidos</span>
+      </label>
+      <label style="display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer;">
+        <input type="checkbox" id="music-toggle" style="transform: scale(1.2);">
+        <span>Activar música de fondo</span>
+      </label>
+    </div>
+    
+    <div style="margin: 1.5rem 0;">
+      <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem; color: #555;">👤 Cuenta</h3>
+      <button id="btn-auth" style="background: linear-gradient(135deg, #4285f4, #34a853); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 1rem; cursor: pointer; margin: 0.5rem;">
+        🔑 Iniciar Sesión
+      </button>
+    </div>
+    
+    <div style="margin: 1.5rem 0;">
+      <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem; color: #555;">🏆 Rankings</h3>
+      <button id="btn-candy-ranking" style="background: linear-gradient(135deg, #ff6b6b, #ffa500); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 1rem; cursor: pointer; margin: 0.5rem;">
+        🍬 Ranking Caramelos
+      </button>
+    </div>
+    
+    <button id="btn-close-settings" style="background: #666; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-size: 0.9rem; cursor: pointer; margin-top: 1rem;">
+      Cerrar
+    </button>
+  `;
+  
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+  
+  // Event listeners
+  document.getElementById('btn-close-settings').addEventListener('click', () => {
+    modal.remove();
+  });
+  
+  // Función para actualizar el botón de autenticación
+  const updateAuthButton = () => {
+    console.log('🔧 updateAuthButton() llamado');
+    const authButton = document.getElementById('btn-auth');
+    if (!authButton) {
+      console.log('❌ Botón btn-auth no encontrado');
+      return;
+    }
+    
+    console.log('🔧 Verificando estado de login...');
+    console.log('🔧 GameBridge disponible:', !!window.GameBridge);
+    console.log('🔧 isUserLoggedIn disponible:', !!(window.GameBridge && window.GameBridge.isUserLoggedIn));
+    
+    // Verificar si el usuario está logueado
+    const isLoggedIn = window.GameBridge && window.GameBridge.isUserLoggedIn ? window.GameBridge.isUserLoggedIn() : false;
+    console.log('🔧 isLoggedIn:', isLoggedIn);
+    
+    if (isLoggedIn) {
+      console.log('🔧 Usuario logueado - configurando botón de cerrar sesión');
+      // Usuario logueado - mostrar botón de cerrar sesión
+      const userData = window.GameBridge && window.GameBridge.getUser ? window.GameBridge.getUser() : null;
+      console.log('🔧 userData:', userData);
+      let nick = 'Usuario';
+      
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          nick = user.nick || 'Usuario';
+          console.log('🔧 Nick extraído:', nick);
+        } catch (e) {
+          console.log('❌ Error parsing user data:', e);
+        }
+      }
+      
+      authButton.innerHTML = `🚪 Cerrar Sesión - ${nick}`;
+      authButton.style.background = 'linear-gradient(135deg, #ff6b6b, #ff4757)';
+      console.log('✅ Botón configurado para cerrar sesión');
+    } else {
+      console.log('🔧 Usuario NO logueado - configurando botón de iniciar sesión');
+      // Usuario no logueado - mostrar botón de iniciar sesión
+      authButton.innerHTML = '🔑 Entrar con Google';
+      authButton.style.background = 'linear-gradient(135deg, #4285f4, #34a853)';
+      console.log('✅ Botón configurado para iniciar sesión');
+    }
+  };
+  
+  // Actualizar el botón al cargar el modal
+  updateAuthButton();
+  
+  document.getElementById('btn-auth').addEventListener('click', () => {
+    console.log('🔧🔧🔧 btn-auth click detectado 🔧🔧🔧');
+    const isLoggedIn = window.GameBridge && window.GameBridge.isUserLoggedIn ? window.GameBridge.isUserLoggedIn() : false;
+    console.log('🔧 Estado de login al hacer click:', isLoggedIn);
+    
+    if (isLoggedIn) {
+      console.log('🔧 Ejecutando signOut()...');
+      // Cerrar sesión
+      if (window.GameBridge && window.GameBridge.signOut) {
+        console.log('🔧 Llamando a window.GameBridge.signOut()');
+        window.GameBridge.signOut();
+        // Actualizar el botón después de cerrar sesión
+        setTimeout(updateAuthButton, 500);
+      } else {
+        console.log('🔧 ERROR: window.GameBridge.signOut no disponible');
+      }
+    } else {
+      console.log('🔧 Ejecutando signInWithGoogle()...');
+      // Iniciar sesión
+      if (window.GameBridge && window.GameBridge.signInWithGoogle) {
+        window.GameBridge.signInWithGoogle();
+      } else {
+        alert('Login con Google no disponible en este momento');
+      }
+    }
+  });
+  
+  document.getElementById('btn-candy-ranking').addEventListener('click', () => {
+    modal.remove();
+    // Abrir RankingActivity nativa en lugar del modal
+    if (window.GameBridge && window.GameBridge.openCandyRanking) {
+      window.GameBridge.openCandyRanking();
+    } else {
+      alert('Ranking no disponible en este momento');
+    }
+  });
+  
+  // 1) Estado inmediato desde localStorage (mejor UX)
+  (() => {
+    const savedAudio = localStorage.getItem('audioEnabled');
+    const savedMusic = localStorage.getItem('musicEnabled');
+    if (savedAudio !== null) window.audioEnabled = (savedAudio === 'true');
+    if (savedMusic !== null) window.musicEnabled = (savedMusic === 'true');
+    updateAudioToggles();
+  })();
+
+  // 2) Refresco puntual desde Firebase si está logueado
+  const refreshOnceFromFirebase = () => {
+    if (window.GameBridge && window.GameBridge.isUserLoggedIn && window.GameBridge.isUserLoggedIn()) {
+      // intento directo
+      if (!refreshAudioFromBridge()) {
+        // si aún no, esperamos hasta 3s y reintentamos una vez
+        const t = setTimeout(() => {
+          refreshAudioFromBridge();
+          clearTimeout(t);
+        }, 1000);
+      }
+    }
+  };
+  refreshOnceFromFirebase();
+  
+  // Cerrar con ESC
+  const escHandler = (e) => {
+    if (e.key === 'Escape') {
+      modal.remove();
+      document.removeEventListener('keydown', escHandler);
+    }
+  };
+  document.addEventListener('keydown', escHandler);
+};
+
+// ========== RANKING DE CARAMELOS ==========
+export const showCandyRanking = () => {
+  const modal = document.createElement('div');
+  modal.id = 'candy-ranking-modal';
+  modal.className = 'modal-overlay';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+  `;
+  
+  const content = document.createElement('div');
+  content.className = 'modal-content';
+  content.style.cssText = `
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    text-align: center;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    color: #333;
+  `;
+  
+  content.innerHTML = `
+    <h2 style="margin: 0 0 1rem 0; font-size: 1.5rem; color: #333;">🍬 Ranking de Caramelos</h2>
+    <p style="margin: 0 0 1.5rem 0; color: #666;">Los jugadores con más caramelos</p>
+    
+    <div id="ranking-list" style="text-align: left; margin: 1rem 0;">
+      <div style="padding: 1rem; background: #f5f5f5; border-radius: 8px; margin: 0.5rem 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-weight: bold;">Cargando ranking...</span>
+          <span style="color: #666;">-</span>
+        </div>
+      </div>
+    </div>
+    
+    <button id="btn-close-ranking" style="background: #666; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-size: 0.9rem; cursor: pointer; margin-top: 1rem;">
+      Cerrar
+    </button>
+  `;
+  
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+  
+  // Event listeners
+  document.getElementById('btn-close-ranking').addEventListener('click', () => {
+    modal.remove();
+  });
+  
+  // Cargar ranking después de que el DOM esté listo
+  setTimeout(() => {
+    loadCandyRanking();
+  }, 100);
+  
+  // Cerrar con ESC
+  const escHandler = (e) => {
+    if (e.key === 'Escape') {
+      modal.remove();
+      document.removeEventListener('keydown', escHandler);
+    }
+  };
+  document.addEventListener('keydown', escHandler);
+};
+
+// ========== CARGAR RANKING DE CARAMELOS ==========
+const loadCandyRanking = async () => {
+  try {
+    console.log('🔄 Iniciando carga de ranking de caramelos...');
+    
+    const rankingList = document.getElementById('ranking-list');
+    console.log('🔍 Buscando elemento ranking-list...', rankingList);
+    
+    // Verificar que el elemento existe
+    if (!rankingList) {
+      console.error('❌ Elemento ranking-list no encontrado');
+      return;
+    }
+    
+    console.log('✅ Elemento ranking-list encontrado');
+    
+    // Mostrar mensaje de carga
+    rankingList.innerHTML = `
+      <div style="padding: 1rem; background: #f5f5f5; border-radius: 8px; margin: 0.5rem 0; text-align: center;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-weight: bold;">Cargando ranking...</span>
+          <span style="color: #666;">⏳</span>
+        </div>
+      </div>
+    `;
+    
+    // Configurar callback para recibir el ranking
+    window.onCandyRankingReceived = (ranking) => {
+      console.log('📥 Ranking de caramelos recibido:', ranking);
+      
+      if (!ranking || ranking.length === 0) {
+        rankingList.innerHTML = `
+          <div style="padding: 1rem; background: #f8d7da; border-radius: 8px; margin: 0.5rem 0; color: #721c24; border-left: 4px solid #f5c6cb;">
+            <div style="text-align: center;">
+              <h3 style="margin: 0 0 0.5rem 0; color: #721c24;">🍬 Sin Datos</h3>
+              <p style="margin: 0; font-size: 0.9rem;">
+                No hay jugadores en el ranking aún.
+              </p>
+            </div>
+          </div>
+        `;
+        return;
+      }
+      
+      // Generar HTML del ranking
+      let rankingHTML = '';
+      ranking.forEach((player, index) => {
+        const position = index + 1;
+        const nick = player.nick || 'Jugador Anónimo';
+        const candies = player.candiesTotal || 0;
+        
+        // Emoji según posición
+        let positionEmoji = '🏅';
+        if (position === 1) positionEmoji = '🥇';
+        else if (position === 2) positionEmoji = '🥈';
+        else if (position === 3) positionEmoji = '🥉';
+        
+        rankingHTML += `
+          <div style="padding: 0.8rem; background: ${index % 2 === 0 ? '#f8f9fa' : '#ffffff'}; border-radius: 6px; margin: 0.3rem 0; border-left: 3px solid ${position <= 3 ? '#28a745' : '#6c757d'};">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-weight: bold; color: ${position <= 3 ? '#28a745' : '#6c757d'};">${positionEmoji} #${position}</span>
+                <span style="font-weight: 500;">${nick}</span>
+              </div>
+              <span style="font-weight: bold; color: #ff6b35;">🍬 ${candies}</span>
+            </div>
+          </div>
+        `;
+      });
+      
+      rankingList.innerHTML = rankingHTML;
+      console.log('✅ Ranking de caramelos mostrado');
+    };
+    
+    // Llamar al método de GameBridge
+    console.log('📡 Llamando a GameBridge.getCandyRanking()...');
+    if (window.GameBridge && window.GameBridge.getCandyRanking) {
+      window.GameBridge.getCandyRanking();
+    } else {
+      console.error('❌ GameBridge.getCandyRanking no disponible');
+      rankingList.innerHTML = `
+        <div style="padding: 1rem; background: #f8d7da; border-radius: 8px; margin: 0.5rem 0; color: #721c24; border-left: 4px solid #f5c6cb;">
+          <div style="text-align: center;">
+            <h3 style="margin: 0 0 0.5rem 0; color: #721c24;">❌ Error</h3>
+            <p style="margin: 0; font-size: 0.9rem;">
+              No se pudo cargar el ranking.
+            </p>
+          </div>
+        </div>
+      `;
+    }
+    
+  } catch (error) {
+    console.error('❌ Error en loadCandyRanking:', error);
+  }
+};
+
 // ========== INICIALIZACIÓN COMÚN ==========
 export const initCommonUI = () => {
   preventZoom();
@@ -375,6 +1125,397 @@ export const initCommonUI = () => {
   const fsBtn = document.getElementById('btn-fullscreen');
   if (fsBtn) {
     fsBtn.addEventListener('click', toggleFullscreen);
+  }
+  
+  // Botón de ajustes
+  const settingsBtn = document.getElementById('btn-settings');
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', showSettingsModal);
+  }
+  
+  // Exponer funciones globalmente para que Java pueda llamarlas
+  window.updateAudioToggles = updateAudioToggles;
+  window.updateHUD = updateHUD;
+  window.playAudioFile = playAudioFile; // Exponer globalmente para levelup.js y otros
+  window.playBackgroundMusic = playBackgroundMusic;
+  window.stopBackgroundMusic = stopBackgroundMusic;
+  window.setMusicEnabled = setMusicEnabled;
+  
+  // Callback para cuando Firebase actualiza las preferencias de audio
+  window.onAudioPreferencesUpdated = (soundEnabled, musicEnabled) => {
+    console.log('🔄 onAudioPreferencesUpdated() llamado desde Java - sonido:', soundEnabled, 'música:', musicEnabled);
+    
+    // Actualizar variables globales
+    window.audioEnabled = soundEnabled;
+    window.musicEnabled = musicEnabled;
+    
+    // Actualizar localStorage
+    localStorage.setItem('audioEnabled', soundEnabled.toString());
+    localStorage.setItem('musicEnabled', musicEnabled.toString());
+    
+    console.log('🔄 Variables globales actualizadas - audioEnabled:', window.audioEnabled, 'musicEnabled:', window.musicEnabled);
+    
+    // Aplicar cambios de música inmediatamente
+    if (musicEnabled) {
+      console.log('🎵 Activando música de fondo desde callback...');
+      if (window.playBackgroundMusic) {
+        window.playBackgroundMusic();
+      }
+    } else {
+      console.log('🔇 Desactivando música de fondo desde callback...');
+      if (window.stopBackgroundMusic) {
+        window.stopBackgroundMusic();
+      }
+    }
+    
+    // Actualizar toggles si el modal está abierto
+    updateAudioToggles();
+  };
+  
+  // Cargar preferencias de audio
+  const waitForFirebaseData = () => {
+    const checkInterval = setInterval(() => {
+      try {
+        // Usar getUser() en lugar de getCandies() para obtener soundEnabled y musicEnabled
+        const userDataStr = window.GameBridge?.getUser ? window.GameBridge.getUser() : null;
+        if (userDataStr && userDataStr !== '{}') {
+          const userData = JSON.parse(userDataStr);
+          if (userData.nick && userData.nick !== "Usuario" &&
+              typeof userData.soundEnabled === 'boolean' &&
+              typeof userData.musicEnabled === 'boolean') {
+            console.log('🔊 Firebase listo -> aplicando preferencias');
+            clearInterval(checkInterval);
+            loadAudioPreferences({ force: true }).then(() => {
+              initBackgroundMusic();
+            });
+          }
+        }
+      } catch (err) {
+        console.log('🔊 Error verificando datos de Firebase:', err);
+      }
+    }, 500);
+
+    // Timeout de seguridad: caer a localStorage (sin forzar falsos)
+    setTimeout(() => {
+      clearInterval(checkInterval);
+      console.log('⚠️ Timeout esperando Firebase -> localStorage si existe');
+      loadAudioPreferences({ force: true }).then(() => {
+        initBackgroundMusic();
+      });
+    }, 10000);
+  };
+  waitForFirebaseData();
+};
+
+// Fuerza una lectura directa de GameBridge.getUser() y aplica toggles
+export const refreshAudioFromBridge = () => {
+  try {
+    // Usar getUser() en lugar de getCandies() porque getUser() incluye soundEnabled y musicEnabled
+    if (!(window.GameBridge && window.GameBridge.getUser)) return false;
+    const dataStr = window.GameBridge.getUser();
+    if (!dataStr || dataStr === '{}') return false;
+
+    const user = JSON.parse(dataStr);
+    console.log('🔊 refreshAudioFromBridge() - datos obtenidos:', {
+      soundEnabled: user.soundEnabled,
+      musicEnabled: user.musicEnabled,
+      hasSoundEnabled: typeof user.soundEnabled === 'boolean',
+      hasMusicEnabled: typeof user.musicEnabled === 'boolean'
+    });
+    
+    if (typeof user.soundEnabled === 'boolean' && typeof user.musicEnabled === 'boolean') {
+      window.audioEnabled = user.soundEnabled;
+      window.musicEnabled = user.musicEnabled;
+
+      // guarda backup
+      localStorage.setItem('audioEnabled', String(window.audioEnabled));
+      localStorage.setItem('musicEnabled', String(window.musicEnabled));
+
+      console.log('✅ Preferencias de audio cargadas desde Firebase - sonido:', window.audioEnabled, 'música:', window.musicEnabled);
+
+      // refleja en UI si procede
+      if (typeof updateAudioToggles === 'function') updateAudioToggles();
+
+      // música on/off inmediato
+      if (window.musicEnabled && window.playBackgroundMusic) window.playBackgroundMusic();
+      if (!window.musicEnabled && window.stopBackgroundMusic) window.stopBackgroundMusic();
+
+      return true;
+    } else {
+      console.log('⚠️ refreshAudioFromBridge() - soundEnabled o musicEnabled no son boolean:', {
+        soundEnabled: user.soundEnabled,
+        musicEnabled: user.musicEnabled
+      });
+    }
+    return false;
+  } catch (e) {
+    console.log('❌ refreshAudioFromBridge error:', e);
+    return false;
+  }
+};
+
+// Función para cargar preferencias de audio desde Firebase o localStorage
+// Función para guardar configuraciones (adaptada de MemoFlip)
+const saveAudioSettings = (soundEnabled, musicEnabled) => {
+  // Guardar en localStorage inmediatamente (como MemoFlip)
+  localStorage.setItem('audioEnabled', soundEnabled.toString());
+  localStorage.setItem('musicEnabled', musicEnabled.toString());
+  console.log('⚙️ Configuraciones guardadas en localStorage - sonido:', soundEnabled, 'música:', musicEnabled);
+  
+  // También guardar en Firestore si hay usuario
+  if (window.GameBridge && window.GameBridge.isUserLoggedIn && window.GameBridge.isUserLoggedIn()) {
+    try {
+      // Usar GameBridge para guardar en Firestore (estructura original)
+      if (window.GameBridge.updateAudioPreferences) {
+        window.GameBridge.updateAudioPreferences(soundEnabled, musicEnabled);
+        console.log('⚙️ Configuraciones guardadas en Firestore:', { soundEnabled, musicEnabled });
+      }
+    } catch (error) {
+      console.error('❌ Error guardando configuraciones en Firestore:', error);
+    }
+  }
+};
+
+const loadAudioPreferences = ({ force = false } = {}) => {
+  console.log('🔊 Cargando preferencias de audio...', { force });
+
+  // Permite recarga si force=true
+  if (audioPreferencesLoaded && !force) {
+    console.log('🔊 Preferencias ya cargadas, saltando carga');
+    return Promise.resolve();
+  }
+  
+  return new Promise((resolve) => {
+    // ---- RUTA ANDROID / LOGUEADO ----
+    if (window.GameBridge && window.GameBridge.isUserLoggedIn && window.GameBridge.isUserLoggedIn()) {
+      console.log('🔊 Usuario logueado, intentando obtener preferencias desde GameBridge/Firestore...');
+
+      // 1) Intento inmediato desde bridge
+      const applied = refreshAudioFromBridge();
+      if (applied) {
+        audioPreferencesLoaded = true;
+        return resolve();
+      }
+
+      // 2) Configurar callback tardío
+      window.onAudioPreferencesLoaded = () => {
+        console.log('🔊 onAudioPreferencesLoaded -> sincronizando');
+        const ok = refreshAudioFromBridge();
+        audioPreferencesLoaded = true; // ahora sí
+        window.onAudioPreferencesLoaded = null;
+        resolve();
+      };
+
+      // 3) Timeout de seguridad: NO fuerces false; cae a localStorage si existe
+      setTimeout(() => {
+        if (window.onAudioPreferencesLoaded) {
+          console.log('⚠️ Timeout Firebase; usando localStorage si hay');
+          const savedAudio = localStorage.getItem('audioEnabled');
+          const savedMusic = localStorage.getItem('musicEnabled');
+
+          // Si hay algo guardado, úsalo; si no, deja null (no tocar checks aún)
+          if (savedAudio !== null) window.audioEnabled = (savedAudio === 'true');
+          if (savedMusic !== null) window.musicEnabled = (savedMusic === 'true');
+
+          if (typeof updateAudioToggles === 'function') updateAudioToggles();
+
+          // NO marcamos audioPreferencesLoaded si seguimos en null, para permitir refresco posterior
+          if (savedAudio !== null && savedMusic !== null) audioPreferencesLoaded = true;
+
+          window.onAudioPreferencesLoaded = null;
+          resolve();
+        }
+      }, 3000);
+
+    // ---- RUTA WEB / NO LOGUEADO ----
+    } else {
+      console.log('🔊 Usuario no logueado, cargando desde localStorage');
+      const savedAudioEnabled = localStorage.getItem('audioEnabled');
+      const savedMusicEnabled = localStorage.getItem('musicEnabled');
+
+      window.audioEnabled = savedAudioEnabled !== null ? savedAudioEnabled === 'true' : null;
+      window.musicEnabled = savedMusicEnabled !== null ? savedMusicEnabled === 'true' : null;
+
+      if (typeof updateAudioToggles === 'function') updateAudioToggles();
+
+      // Música solo si es true conocido
+      if (window.musicEnabled === true && window.playBackgroundMusic) window.playBackgroundMusic();
+
+      // Solo marcamos "cargadas" si tenemos valores reales (no null)
+      audioPreferencesLoaded = (window.audioEnabled !== null && window.musicEnabled !== null);
+      resolve();
+    }
+  });
+};
+
+// Función para actualizar los toggles de audio
+const updateAudioToggles = () => {
+  const soundToggle = document.getElementById('sound-toggle');
+  const musicToggle = document.getElementById('music-toggle');
+  
+  // Usar las variables globales en lugar de las locales
+  const currentAudioEnabled = window.audioEnabled;
+  const currentMusicEnabled = window.musicEnabled;
+  
+  console.log('🔧 updateAudioToggles() llamado - audioEnabled:', currentAudioEnabled, 'musicEnabled:', currentMusicEnabled);
+  
+  // Solo actualizar si los valores no son null
+  if (currentAudioEnabled === null || currentAudioEnabled === undefined || 
+      currentMusicEnabled === null || currentMusicEnabled === undefined) {
+    console.log('🔧 Valores de audio aún no cargados, saltando actualización de toggles');
+    return;
+  }
+  
+  if (soundToggle) {
+    // Evitar eventos durante la actualización
+    if (soundToggle._changeHandler) {
+      soundToggle.removeEventListener('change', soundToggle._changeHandler);
+    }
+    
+    // Actualizar el estado del toggle
+    soundToggle.checked = currentAudioEnabled;
+    console.log('🔊 Toggle de sonido actualizado a:', currentAudioEnabled);
+    
+    // Re-agregar el event listener
+    soundToggle._changeHandler = (e) => {
+      console.log('🔊 Toggle de sonido cambiado a:', e.target.checked);
+      
+      // Actualizar variables globales inmediatamente
+      window.audioEnabled = e.target.checked;
+      
+      console.log('🔊 Variables actualizadas - audioEnabled:', window.audioEnabled);
+      
+      // Guardar usando la función adaptada de MemoFlip
+      saveAudioSettings(e.target.checked, window.musicEnabled);
+      
+      console.log('🔊 Sonido:', window.audioEnabled ? 'Activado' : 'Desactivado');
+    };
+    soundToggle.addEventListener('change', soundToggle._changeHandler);
+  }
+  
+  if (musicToggle) {
+    // Evitar eventos durante la actualización
+    if (musicToggle._changeHandler) {
+      musicToggle.removeEventListener('change', musicToggle._changeHandler);
+    }
+    
+    // Actualizar el estado del toggle
+    musicToggle.checked = currentMusicEnabled;
+    console.log('🎵 Toggle de música actualizado a:', currentMusicEnabled);
+    
+    // Re-agregar el event listener
+    musicToggle._changeHandler = (e) => {
+      console.log('🎵 Toggle de música cambiado a:', e.target.checked);
+      setMusicEnabled(e.target.checked);
+    };
+    musicToggle.addEventListener('change', musicToggle._changeHandler);
+  }
+};
+
+// ========== MANEJO DE VISIBILIDAD DE PÁGINA (minimizar/maximizar) ==========
+// Pausar música cuando se minimiza y reanudar cuando se maximiza
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    // Página oculta (app minimizada)
+    console.log('🔇 Página oculta - pausando música');
+    if (backgroundMusic && !backgroundMusic.paused) {
+      backgroundMusic.pause();
+      // Guardar el tiempo actual para reanudar desde ahí
+      window._musicPausedAt = backgroundMusic.currentTime;
+    }
+  } else {
+    // Página visible (app maximizada)
+    console.log('🎵 Página visible - reanudando música si estaba habilitada');
+    // Verificar si la música está habilitada (tanto window.musicEnabled como localStorage)
+    const musicEnabled = window.musicEnabled !== false && 
+                         localStorage.getItem('musicEnabled') !== 'false' &&
+                         localStorage.getItem('musicEnabled') !== null;
+    if (musicEnabled && backgroundMusic && backgroundMusic.paused) {
+      // Reanudar desde donde se pausó
+      if (window._musicPausedAt !== undefined) {
+        backgroundMusic.currentTime = window._musicPausedAt;
+        delete window._musicPausedAt;
+      }
+      backgroundMusic.play().catch(e => {
+        console.log('⚠️ No se pudo reanudar música:', e);
+      });
+    }
+  }
+});
+
+// También manejar eventos de blur/focus como respaldo
+window.addEventListener('blur', () => {
+  console.log('🔇 Ventana perdió foco - pausando música');
+  if (backgroundMusic && !backgroundMusic.paused) {
+    backgroundMusic.pause();
+    window._musicPausedAt = backgroundMusic.currentTime;
+  }
+});
+
+window.addEventListener('focus', () => {
+  console.log('🎵 Ventana recuperó foco - reanudando música si estaba habilitada');
+  // Verificar si la música está habilitada (tanto window.musicEnabled como localStorage)
+  const musicEnabled = window.musicEnabled !== false && 
+                       localStorage.getItem('musicEnabled') !== 'false' &&
+                       localStorage.getItem('musicEnabled') !== null;
+  if (musicEnabled && backgroundMusic && backgroundMusic.paused) {
+    if (window._musicPausedAt !== undefined) {
+      backgroundMusic.currentTime = window._musicPausedAt;
+      delete window._musicPausedAt;
+    }
+    backgroundMusic.play().catch(e => {
+      console.log('⚠️ No se pudo reanudar música:', e);
+    });
+  }
+});
+
+// Callback para cuando se complete el cierre de sesión
+window.onSignOutComplete = () => {
+  console.log('🚪🚪🚪 onSignOutComplete() llamado desde Java 🚪🚪🚪');
+  console.log('🚪 Sesión cerrada exitosamente');
+  
+  // Resetear datos de localStorage al estado inicial
+  if (typeof window.resetDataOnLogout === 'function') {
+    console.log('🔄 Reseteando datos de localStorage...');
+    window.resetDataOnLogout();
+  } else {
+    console.warn('⚠️ resetDataOnLogout no disponible, usando método alternativo...');
+    // Fallback: limpiar manualmente
+    import('./storage.js').then(({ resetDataOnLogout }) => {
+      resetDataOnLogout();
+    }).catch(error => {
+      console.error('❌ Error importando resetDataOnLogout:', error);
+    });
+  }
+  
+  // Verificar el estado después del cierre de sesión
+  const isStillLoggedIn = window.GameBridge && window.GameBridge.isUserLoggedIn ? window.GameBridge.isUserLoggedIn() : false;
+  console.log('🚪 ¿Sigue logueado después del signOut?:', isStillLoggedIn);
+  
+  // Forzar actualización del nick a "Invitado" inmediatamente
+  const userNickEl = document.getElementById('user-nick');
+  if (userNickEl) {
+    userNickEl.textContent = 'Invitado';
+    userNickEl.style.display = 'block';
+    console.log('👤 Nick actualizado a "Invitado" después del cierre de sesión');
+  }
+  
+  // Actualizar HUD para reflejar que el usuario ya no está logueado
+  updateHUD();
+  
+  // Si hay un modal de ajustes abierto, actualizar el botón
+  const settingsModal = document.getElementById('settings-modal');
+  if (settingsModal) {
+    console.log('🚪 Modal de ajustes encontrado, actualizando botón...');
+    const updateAuthButton = () => {
+      const authButton = document.getElementById('btn-auth');
+      if (authButton) {
+        authButton.innerHTML = '🔑 Entrar con Google';
+        authButton.style.background = 'linear-gradient(135deg, #4285f4, #34a853)';
+        console.log('🚪 Botón actualizado a "Entrar con Google"');
+      }
+    };
+    updateAuthButton();
   }
 };
 

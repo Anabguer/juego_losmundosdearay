@@ -27,7 +27,18 @@ function resetIncorrectData() {
     'aray_best_level_tienda',
     'aray_best_level_informatica',
     'aray_best_level_rio',
-    'offline_progress_queue'
+    'offline_progress_queue',
+    // Nuevas claves unificadas
+    'losmundosdearay_user_data',
+    'losmundosdearay_settings',
+    'losmundosdearay_resources',
+    'losmundosdearay_progress',
+    'losmundosdearay_sync',
+    'aray_fresitas',
+    'aray_energy',
+    'audioEnabled',
+    'musicEnabled',
+    'user_nick'
   ];
   
   keysToRemove.forEach(key => {

@@ -5,9 +5,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0e1320">
-  <link rel="icon" href="assets/img/logo.png">
+  <link rel="icon" href="img/logo.png">
   <title>👴👵 Casa Yayos - Caza Ratas</title>
-  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body class="game-yayos">
   
@@ -17,7 +17,7 @@
     <div class="hud-chips">
       <div class="chip">
         <span class="chip-icon">⭐</span>
-        <span id="hud-score">Nivel 1</span>
+        <span id="hud-level">Nivel 1</span>
       </div>
       <div class="chip">
         <span class="chip-icon">🍬</span>
@@ -31,12 +31,11 @@
     <div class="game-canvas-wrapper">
       <canvas id="game-canvas"></canvas>
     </div>
-    
     <!-- Overlay inicial -->
-    <div class="game-overlay active" id="game-overlay">
+    <div class="game-overlay hidden" id="game-overlay">
       <div class="game-overlay-content">
         <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem;">🐀 Caza Ratas</h2>
-        <p style="margin: 0 0 1rem 0; font-size: 0.9rem;">Toca para disparar y no dejes escapar 3 ratas</p>
+        <p style="margin: 0 0 1rem 0; font-size: 0.9rem;">Toca para disparar y no dejes que ninguna rata llegue a Aray</p>
         <div class="game-stats" style="display: flex; justify-content: center; margin: 0.8rem 0;">
           <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.8rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 120px;">
             <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">NIVEL MÁS ALTO</div>

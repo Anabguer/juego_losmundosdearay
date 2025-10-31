@@ -98,8 +98,8 @@ const createUserMenu = () => {
     <button id="login-btn" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.9rem;">
       🔐 Entrar
     </button>
-    <button id="ranking-btn" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.9rem;">
-      🏆 Ranking
+    <button id="settings-btn" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.9rem;">
+      ⚙️ Ajustes
     </button>
     <button id="logout-btn" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.9rem; display: none;">
       🚪 Salir
@@ -341,7 +341,14 @@ export const initAuthUI = () => {
   
   // Event listeners
   document.getElementById('login-btn').onclick = showLoginModal;
-  document.getElementById('ranking-btn').onclick = showRankingModal;
+  document.getElementById('settings-btn').onclick = () => {
+    // Importar y mostrar modal de ajustes
+    import('./ui.js').then(module => {
+      if (module.showSettingsModal) {
+        module.showSettingsModal();
+      }
+    });
+  };
   document.getElementById('logout-btn').onclick = signOut;
   
   // Escuchar cambios de autenticación

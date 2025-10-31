@@ -4,10 +4,9 @@
    ======================================== */
 
 import { getCandies, addCandies, getBest, setBest, saveScoreToServer } from './storage.js';
-import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js?v=3';
+import { initCommonUI, updateHUD, toast, playSound, playAudioFile, vibrate, celebrateCandyEarned } from './ui.js';
 
-const BEST_KEY = 'aray_best_yayos';
-const BEST_LEVEL_KEY = 'aray_best_level_yayos';
+const BEST_KEY = 'yayos';
 
 // Canvas y contexto
 let canvas, ctx, dpr;
@@ -19,16 +18,16 @@ const RAT_COUNT = 4;
 const loadRatImages = () => {
   for (let i = 1; i <= RAT_COUNT; i++) {
     const img = new Image();
-    img.src = `assets/img/enemigos/rata${i}.png`;
+    img.src = `img/enemigos/rata${i}.png`;
     ratImages.push(img);
   }
   
   // Cargar imágenes de Aray para rotación (solo las 4 caras principales)
   const arayImagePaths = [
-    'assets/img/personaje/aray_head_happy2.png',
-    'assets/img/personaje/aray_head_neutral.png',
-    'assets/img/personaje/aray_head_angry.png',
-    'assets/img/personaje/aray_head_sleep.png'
+    'img/personaje/aray_head_happy2.png',
+    'img/personaje/aray_head_neutral.png',
+    'img/personaje/aray_head_angry.png',
+    'img/personaje/aray_head_sleep.png'
   ];
   
   arayImagePaths.forEach(path => {
@@ -41,15 +40,15 @@ const loadRatImages = () => {
 // Estado del juego
 const state = {
   score: 0,
-  timeLeft: 90,
-  maxTime: 90,
   level: 1,
   rats: [],
   bullets: [],
   gameOver: false,
+  gameStarted: false,
   lastRatSpawn: 0,
   spawnInterval: 2500, // Empieza con 2.5 segundos entre ratas
-  ratSpeed: 1.5 // Velocidad inicial (horizontal) - más lento
+  ratSpeed: 1.5, // Velocidad inicial (horizontal) - más lento
+  ratsKilled: 0 // Contador de ratas matadas
 };
 
 // Configuración base
@@ -108,50 +107,29 @@ const resizeCanvas = () => {
 };
 
 // Inicializar juego
-const initGame = () => {
+const initGame = async () => {
   if (!canvas || !ctx) return;
   
+  console.log('🎮 Iniciando juego desde nivel 1');
+  
+  // Limpiar animación de nivel si existe
+  if (typeof window !== 'undefined' && typeof window.hideLevelUpAnimation === 'function') {
+    window.hideLevelUpAnimation();
+  }
+  
   state.score = 0;
-  state.level = 1;
-  state.timeLeft = 90;
+  state.level = 1; // SIEMPRE empezar en nivel 1
   state.rats = [];
   state.bullets = [];
   state.gameOver = false;
+  state.gameStarted = true;
   state.lastRatSpawn = Date.now();
   state.spawnInterval = 2500;
   state.ratSpeed = 1.5;
+  state.ratsKilled = 0; // Reiniciar contador de ratas matadas
   
   updateGameHUD();
-  startTimer();
   gameLoop();
-};
-
-// Timer
-let timerInterval = null;
-
-const startTimer = () => {
-  if (timerInterval) clearInterval(timerInterval);
-  
-  timerInterval = setInterval(() => {
-    if (state.gameOver) return;
-    
-    state.timeLeft -= 0.1;
-    
-    // Aumentar dificultad progresivamente
-    const elapsedTime = 90 - state.timeLeft;
-    
-    // Cada 15 segundos aumenta la dificultad (más gradual)
-    if (Math.floor(elapsedTime / 15) > 0) {
-      const difficultyLevel = Math.floor(elapsedTime / 15);
-      state.spawnInterval = Math.max(1000, 2500 - difficultyLevel * 250); // Más rápido gradualmente
-      state.ratSpeed = 1.5 + difficultyLevel * 0.4; // Más veloces gradualmente
-    }
-    
-    if (state.timeLeft <= 0) {
-      state.timeLeft = 0;
-      endGame();
-    }
-  }, 100);
 };
 
 // Loop del juego
@@ -168,6 +146,11 @@ const gameLoop = () => {
   
   // Limpiar canvas
   ctx.clearRect(0, 0, width, height);
+  
+  // Solo dibujar elementos del juego si está iniciado
+  if (!state.gameStarted) {
+    return;
+  }
   
   // Dibujar Aray
   drawAray();
@@ -195,8 +178,14 @@ const gameLoop = () => {
     if (distanceToAray < (config.ratSize + config.araySize) / 2) {
       // Eliminar la rata que llegó a Aray
       state.rats.splice(i, 1);
-      // Terminar el juego inmediatamente
-      endGame('🐀 ¡Una rata llegó a Aray!');
+      
+      console.log('🐀 ¡Rata llegó a Aray! ¡Juego terminado!');
+      
+      // Sonido de rata escapando
+      playSound('rat_escape');
+      
+      // Fin del juego al primer fallo
+      endGame('🐀 ¡Una rata llegó a Aray! ¡Juego terminado!');
       return;
     }
     
@@ -234,6 +223,7 @@ const gameLoop = () => {
         state.rats.splice(j, 1);
         state.bullets.splice(i, 1);
         state.score += 10;
+        state.ratsKilled++; // Incrementar contador de ratas matadas
         
         vibrate(20);
         playSound('coin');
@@ -244,19 +234,27 @@ const gameLoop = () => {
         //   celebrateCandyEarned();
         // }
 
-      // Nivel cada 100 puntos (10 ratas)
-      const newLevel = Math.max(1, Math.floor(state.score / 100) + 1);
-      if (newLevel > state.level) {
-        state.level = newLevel;
-        // Acelerar spawns y ratas un poco
-        state.spawnInterval = Math.max(800, state.spawnInterval - 150);
-        state.ratSpeed += 0.2;
-        addCandies(1);
-        celebrateCandyEarned();
-        if (typeof window !== 'undefined' && typeof window.showLevelUpAnimation === 'function') {
-          window.showLevelUpAnimation(state.level);
-        }
+    // Nivel cada 10 ratas matadas (1 caramelo por nivel)
+    const newLevel = Math.max(1, Math.floor(state.ratsKilled / 10) + 1);
+    if (newLevel > state.level) {
+      const oldLevel = state.level;
+      state.level = newLevel;
+      
+      console.log(`🎉 ¡Subida de nivel! ${oldLevel} → ${newLevel} (Ratas matadas: ${state.ratsKilled})`);
+      
+      // Acelerar spawns y ratas un poco
+      state.spawnInterval = Math.max(800, state.spawnInterval - 150);
+      state.ratSpeed += 0.2;
+      
+      // Solo actualizar récord si superamos el nivel anterior guardado
+      updateFirebaseOnLevelUp(state.level);
+      
+      addCandies(1);
+      celebrateCandyEarned();
+      if (typeof window !== 'undefined' && typeof window.showLevelUpAnimation === 'function') {
+        window.showLevelUpAnimation(state.level);
       }
+    }
         
         updateGameHUD();
         break;
@@ -489,43 +487,45 @@ const drawCrosshair = () => {
 };
 
 // End game
-const endGame = (reason = '⏰ ¡Se acabó el tiempo!') => {
+const endGame = async (reason = '⏰ ¡Se acabó el tiempo!') => {
   state.gameOver = true;
   
   if (animationId) cancelAnimationFrame(animationId);
-  if (timerInterval) clearInterval(timerInterval);
+  if (typeof timerInterval !== 'undefined' && timerInterval) clearInterval(timerInterval);
   
   // Sonido de perder
-  const audio = new Audio('assets/audio/perder.mp3');
-  audio.volume = 0.5;
-  audio.play().catch(e => console.log('Audio no disponible'));
+  playAudioFile('audio/perder.mp3', 0.8);
   
   vibrate([200, 100, 200]);
   
-  const bestScore = getBest(BEST_KEY);
-  const isNewRecord = state.score > bestScore;
-  const bestLevel = parseInt(localStorage.getItem(BEST_LEVEL_KEY)) || 1;
-  const isNewLevelRecord = state.level > bestLevel;
+  // Guardar nivel de forma asíncrona (sin bloquear la UI)
+  const bestLevel = await getBest('yayos');
+  const isNewRecord = state.level > bestLevel;
   
   if (isNewRecord) {
-    setBest(BEST_KEY, state.level); // Guardar NIVEL, no score
-    saveScoreToServer('yayos', state.score, { score: state.score, candies: getCandies() });
-  }
-  
-  if (isNewLevelRecord) {
-    localStorage.setItem(BEST_LEVEL_KEY, state.level.toString());
+    await setBest('yayos', state.level);
+    saveScoreToServer('yayos', state.level, { level: state.level, score: state.score, candies: getCandies() });
   }
   
   const overlay = document.getElementById('game-overlay');
+  if (!overlay) {
+    console.log('⚠️ game-overlay no encontrado, creando uno nuevo');
+    return;
+  }
   const content = overlay.querySelector('.game-overlay-content');
   
   content.innerHTML = `
-    <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem;">${reason}</h2>
-    <div class="game-stats" style="display: flex; justify-content: center; margin: 0.8rem 0;">
-      <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 120px;">
+    <h2 style="margin: 0 0 0.8rem 0; font-size: 1.4rem;">😅 Fin del juego</h2>
+    <div class="game-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 0.8rem 0;">
+      <div class="stat-card" style="background: linear-gradient(135deg, #ff6b9d, #c44569); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(255, 107, 157, 0.3); min-width: 100px;">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">PUNTOS</div>
+        <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.score}</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Puntos conseguidos</div>
+      </div>
+      <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 100px;">
         <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">NIVEL</div>
         <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.level}</div>
-        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.level, parseInt(localStorage.getItem('aray_best_level_yayos')) || 1)}</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.level, bestLevel)}</div>
       </div>
     </div>
     <div style="display: flex; justify-content: center; margin-top: 0.8rem;">
@@ -533,45 +533,468 @@ const endGame = (reason = '⏰ ¡Se acabó el tiempo!') => {
     </div>
   `;
   
+  // Forzar estilos inline para que tenga fondo pero NO tape el header
+  const headerHeight = 60; // Altura fija del header
+  
+  overlay.style.position = 'absolute';
+  overlay.style.inset = `${headerHeight}px 0px 0px`;
+  overlay.style.width = '100%';
+  overlay.style.height = `calc(100% - ${headerHeight}px)`;
+  overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.75)';
+  overlay.style.display = 'flex';
+  overlay.style.alignItems = 'center';
+  overlay.style.justifyContent = 'center';
+  overlay.style.zIndex = '999'; // Menor que el header (1000)
+  
   overlay.classList.add('active');
   overlay.classList.remove('hidden');
-  overlay.style.display = 'flex';
   
-  document.getElementById('btn-restart').addEventListener('click', () => {
+  document.getElementById('btn-restart').addEventListener('click', async () => {
     overlay.classList.remove('active');
     overlay.classList.add('hidden');
     overlay.style.display = 'none';
-    initGame();
+    await initGame();
   });
 };
 
 // Actualizar HUD
 const updateGameHUD = () => {
-  const scoreEl = document.getElementById('hud-score');
+  const hudLevel = document.getElementById('hud-level');
   const candiesEl = document.getElementById('hud-candies');
   
-  if (scoreEl) scoreEl.textContent = `Nivel ${state.level}`;
+  if (hudLevel) hudLevel.textContent = `Nivel ${state.level}`;
   if (candiesEl) candiesEl.textContent = getCandies();
 };
 
 window.updateHUD = updateGameHUD;
 
 // Init página
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initCommonUI();
   loadRatImages();
   initCanvas();
   
-  const bestLevel = getBest(BEST_LEVEL_KEY) || 1;
-  const bestLevelEl = document.getElementById('best-level');
-  if (bestLevelEl) {
-    bestLevelEl.textContent = bestLevel;
-  }
-  
-  document.getElementById('btn-start').addEventListener('click', () => {
-    document.getElementById('game-overlay').classList.add('hidden');
-    initGame();
-  });
+  // El juego debe iniciarse automáticamente sin esperar al botón
+  // (ya no hay overlay inicial)
+  await initGame();
   
   updateHUD();
 });
+
+// ====== CREAR OVERLAY DINÁMICAMENTE ======
+const createGameOverlay = () => {
+  // Crear el overlay del juego
+  const overlay = document.createElement('div');
+  overlay.id = 'game-overlay';
+  overlay.className = 'game-overlay active';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    font-family: 'Arial', sans-serif;
+  `;
+  
+  // Crear el contenido del overlay
+  const content = document.createElement('div');
+  content.className = 'game-overlay-content';
+  content.style.cssText = `
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    text-align: center;
+    max-width: 400px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  `;
+  
+  // Obtener el mejor nivel (usar cache local)
+  const bestLevel = 1; // Valor por defecto
+  
+  content.innerHTML = `
+    <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem;">🐀 Caza Ratas</h2>
+    <p style="margin: 0 0 1rem 0; font-size: 0.9rem;">Toca para disparar y no dejes escapar 3 ratas</p>
+    <div class="game-stats" style="display: flex; justify-content: center; gap: 1rem; margin: 0.8rem 0;">
+      <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.8rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 120px;">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">NIVEL MÁS ALTO</div>
+        <div id="best-level" style="font-size: 1.2rem; font-weight: bold; color: white;">${bestLevel}</div>
+      </div>
+      <div class="ranking-card" style="background: linear-gradient(135deg, #ffd700, #ffb347); padding: 0.8rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3); min-width: 120px; cursor: pointer;" id="btn-ranking">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">🏆 RANKING</div>
+        <div style="font-size: 1.2rem; font-weight: bold; color: white;">Ver Top</div>
+      </div>
+    </div>
+    <button id="btn-start" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 1rem; cursor: pointer; margin-top: 1rem;">
+      🎮 Jugar
+    </button>
+    <button id="btn-back" style="background: #666; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 0.9rem; cursor: pointer; margin-top: 0.5rem; margin-left: 0.5rem;">
+      ← Volver
+    </button>
+  `;
+  
+  overlay.appendChild(content);
+  document.body.appendChild(overlay);
+  
+  // Agregar event listeners
+  document.getElementById('btn-start').addEventListener('click', async () => {
+    overlay.classList.add('hidden');
+    overlay.style.display = 'none';
+    await initGame();
+  });
+  
+  document.getElementById('btn-back').addEventListener('click', () => {
+    overlay.remove();
+  });
+  
+  document.getElementById('btn-ranking').addEventListener('click', async () => {
+    // Importar y mostrar modal de ranking
+    const { showRankingModal } = await import('./map.js');
+    if (showRankingModal) {
+      showRankingModal();
+    }
+  });
+  
+  return overlay;
+};
+
+// ====== CREAR INTERFAZ COMPLETA DEL JUEGO ======
+const createGameInterface = () => {
+  // Crear el contenedor principal del juego
+  const gameContainer = document.createElement('div');
+  gameContainer.id = 'yayos-game-container';
+  gameContainer.className = 'game-yayos';
+  gameContainer.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    background: #1a1a2e; /* Fondo sólido para ocultar completamente el mapa */
+    font-family: 'Arial', sans-serif;
+  `;
+  
+  // Crear el header
+  const header = document.createElement('header');
+  header.className = 'game-header';
+  header.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    z-index: 10001;
+  `;
+  
+  // Botón volver al pueblo
+  const backBtn = document.createElement('button');
+  backBtn.className = 'btn btn-outline btn-small';
+  backBtn.innerHTML = '← Pueblo';
+  backBtn.style.cssText = `
+    background: transparent;
+    color: white;
+    border: 1px solid #667eea;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+  `;
+  
+  // HUD chips
+  const hudChips = document.createElement('div');
+  hudChips.className = 'hud-chips';
+  hudChips.style.cssText = `
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 300px;
+  `;
+  
+  const scoreChip = document.createElement('div');
+  scoreChip.className = 'chip';
+  scoreChip.innerHTML = `
+    <span class="chip-icon">⭐</span>
+    <span id="hud-score">Nivel 1</span>
+  `;
+  scoreChip.style.cssText = `
+    background: rgba(255, 255, 255, 0.1);
+    padding: 4px 8px;
+    border-radius: 15px;
+    color: white;
+    font-size: 12px;
+    white-space: nowrap;
+  `;
+  
+  const candiesChip = document.createElement('div');
+  candiesChip.className = 'chip';
+  candiesChip.innerHTML = `
+    <span class="chip-icon">🍬</span>
+    <span id="hud-candies">0</span>
+  `;
+  candiesChip.style.cssText = `
+    background: rgba(255, 255, 255, 0.1);
+    padding: 4px 8px;
+    border-radius: 15px;
+    color: white;
+    font-size: 12px;
+    white-space: nowrap;
+  `;
+  
+  hudChips.appendChild(scoreChip);
+  hudChips.appendChild(candiesChip);
+  
+  header.appendChild(backBtn);
+  header.appendChild(hudChips);
+  
+  // Crear el main
+  const main = document.createElement('main');
+  main.className = 'game-main';
+  main.style.cssText = `
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('img/fondos/casayayos.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    z-index: 10000;
+  `;
+  
+  // Crear el canvas wrapper
+  const canvasWrapper = document.createElement('div');
+  canvasWrapper.className = 'game-canvas-wrapper';
+  canvasWrapper.style.cssText = `
+    width: 100%;
+    height: 100%;
+    position: relative;
+    background: rgba(0, 0, 0, 0.1); /* Capa sutil para ocultar el mapa de fondo */
+  `;
+  
+  const canvas = document.createElement('canvas');
+  canvas.id = 'game-canvas';
+  canvas.style.cssText = `
+    width: 100%;
+    height: 100%;
+    display: block;
+  `;
+  
+  canvasWrapper.appendChild(canvas);
+  main.appendChild(canvasWrapper);
+  
+  // Ensamblar todo
+  gameContainer.appendChild(header);
+  gameContainer.appendChild(main);
+  document.body.appendChild(gameContainer);
+  
+  // Event listeners
+      backBtn.addEventListener('click', () => {
+        // Restaurar el avatar del pueblo completamente
+        const avatar = document.querySelector('.avatar');
+        if (avatar) {
+          avatar.style.display = 'block';
+          avatar.style.visibility = 'visible';
+          avatar.style.opacity = '1';
+          avatar.style.pointerEvents = 'auto';
+          avatar.style.zIndex = 'auto';
+          console.log('✅ Avatar del pueblo restaurado al salir del juego');
+        }
+        gameContainer.remove();
+      });
+  
+  return { gameContainer, canvas, header, main };
+};
+
+// ====== EXPORT PARA CARGA DINÁMICA ======
+// Función para probar audio
+const testAudio = () => {
+  try {
+    // Usar playAudioFile para respetar las preferencias de audio
+    playAudioFile('audio/iniciojuego.mp3', 0.3);
+    console.log('🔊 Audio de prueba funcionando');
+  } catch (e) {
+    console.log('❌ Error en audio de prueba:', e);
+  }
+};
+
+export const initYayosGame = () => {
+  console.log('🎮 Iniciando juego de Yayos...');
+  
+  // Probar audio al inicio
+  testAudio();
+  
+  // Ocultar el avatar del pueblo de forma más robusta
+  const hideMapAvatar = () => {
+    const avatar = document.querySelector('.avatar');
+    if (avatar) {
+      avatar.style.display = 'none';
+      avatar.style.visibility = 'hidden';
+      avatar.style.opacity = '0';
+      avatar.style.pointerEvents = 'none';
+      avatar.style.zIndex = '-1';
+      console.log('✅ Avatar del pueblo ocultado completamente');
+    } else {
+      console.log('⚠️ Avatar del pueblo no encontrado');
+    }
+    
+    // También ocultar cualquier elemento con clase avatar
+    const allAvatars = document.querySelectorAll('.avatar');
+    allAvatars.forEach(av => {
+      av.style.display = 'none';
+      av.style.visibility = 'hidden';
+      av.style.opacity = '0';
+      av.style.pointerEvents = 'none';
+      av.style.zIndex = '-1';
+    });
+  };
+  
+  hideMapAvatar();
+  
+  // Asegurar que se mantenga oculto
+  setTimeout(hideMapAvatar, 100);
+  setTimeout(hideMapAvatar, 500);
+  
+  // Crear la interfaz completa del juego
+  const { gameContainer, canvas, header, main } = createGameInterface();
+  
+  // Inicializar el canvas
+  initCanvas();
+  
+  // Cargar imágenes
+  loadRatImages();
+  
+  // Crear overlay del juego dentro del main
+  const overlay = document.createElement('div');
+  overlay.id = 'game-overlay';
+  overlay.className = 'game-overlay active';
+  overlay.style.cssText = `
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+  `;
+  
+  // Crear el contenido del overlay
+  const content = document.createElement('div');
+  content.className = 'game-overlay-content';
+  content.style.cssText = `
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    text-align: center;
+    max-width: 400px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  `;
+  
+  // Obtener el récord personal (usar cache local)
+  const personalRecord = 0; // Valor por defecto
+  
+  content.innerHTML = `
+    <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem;">🐀 Caza Ratas</h2>
+    <p style="margin: 0 0 1rem 0; font-size: 0.9rem;">Toca para disparar y no dejes escapar 3 ratas</p>
+    <p style="margin: 0 0 1rem 0; font-size: 0.8rem; color: #666;">Cada partida empieza en nivel 1. ¡Supera tu récord!</p>
+    <p style="margin: 0 0 1rem 0; font-size: 0.8rem; color: #ff6b6b;">⚠️ Si 3 ratas llegan a Aray, pierdes</p>
+    <p style="margin: 0 0 1rem 0; font-size: 0.8rem; color: #4ecdc4;">🎯 Cada 10 ratas matadas = 1 nivel + 1 caramelo</p>
+    <div class="game-stats" style="display: flex; justify-content: center; margin: 0.8rem 0;">
+      <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.8rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 120px;">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">RÉCORD PERSONAL</div>
+        <div id="best-level" style="font-size: 1.2rem; font-weight: bold; color: white;">${personalRecord}</div>
+      </div>
+    </div>
+    <button id="btn-start" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 1rem; cursor: pointer; margin-top: 1rem;">
+      🎮 Jugar
+    </button>
+  `;
+  
+  overlay.appendChild(content);
+  main.appendChild(overlay);
+  
+  // Agregar event listener para el botón de jugar
+  document.getElementById('btn-start').addEventListener('click', async () => {
+    overlay.classList.add('hidden');
+    overlay.style.display = 'none';
+    await initGame();
+  });
+  
+  // Crear y mostrar el overlay del juego
+  createGameOverlay();
+};
+
+// ========== FUNCIONES DE GUARDADO ==========
+
+// Función para guardar el progreso del nivel al final del juego
+const saveLevelProgress = async () => {
+  try {
+    // Obtener el mejor nivel actual (tanto local como Firebase)
+    const bestLevel = await getBest('yayos');
+    const isNewLevelRecord = state.level > bestLevel;
+    
+    console.log(`🎮 Final del juego - Nivel actual: ${state.level}, Mejor nivel: ${bestLevel}`);
+    
+    if (isNewLevelRecord) {
+      console.log(`🎉 ¡Nuevo récord de nivel! ${bestLevel} → ${state.level}`);
+      
+      // Guardar en Firebase usando GameBridge
+      try {
+        await setBest('yayos', state.level);
+        console.log(`✅ Nivel ${state.level} guardado en Firebase`);
+      } catch (error) {
+        console.warn('⚠️ Error guardando nivel en Firebase:', error);
+      }
+      
+      // También guardar score para compatibilidad (pero el nivel es lo importante)
+      setBest(BEST_KEY, state.level); // Guardar NIVEL, no score
+      saveScoreToServer('yayos', state.score, { score: state.score, level: state.level, candies: getCandies() });
+    } else {
+      console.log(`📊 Nivel sin cambio: ${state.level} ≤ ${bestLevel}`);
+    }
+  } catch (error) {
+    console.error('❌ Error guardando progreso del nivel:', error);
+  }
+};
+
+// ========== FUNCIONES DE FIREBASE ==========
+
+// Función para actualizar Firebase cuando se sube de nivel (solo si superas el récord)
+const updateFirebaseOnLevelUp = async (newLevel) => {
+  try {
+    // Obtener el récord actual
+    const currentRecord = 0;
+    
+    if (newLevel > currentRecord) {
+      console.log(`🏆 ¡NUEVO RÉCORD! ${currentRecord} → ${newLevel}`);
+      
+      // Actualizar nivel máximo usando setBest (que maneja Firebase y localStorage)
+      const success = await setBest('yayos', newLevel);
+      
+      if (success) {
+        console.log(`✅ Firebase: Nuevo récord ${newLevel} guardado exitosamente en Yayos`);
+      } else {
+        console.warn(`⚠️ Firebase: Error guardando récord ${newLevel}`);
+      }
+    } else {
+      console.log(`📊 Nivel ${newLevel} alcanzado (récord: ${currentRecord}) - No se actualiza`);
+    }
+  } catch (error) {
+    console.error('❌ Firebase: Error actualizando nivel en Yayos:', error);
+  }
+};
+

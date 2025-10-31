@@ -4,10 +4,9 @@
    ======================================== */
 
 import { getCandies, addCandies, getBest, setBest, saveScoreToServer } from './storage.js';
-import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js?v=3';
+import { initCommonUI, updateHUD, toast, playSound, playAudioFile, vibrate, celebrateCandyEarned } from './ui.js';
 
-const BEST_KEY = 'aray_best_rio';
-const BEST_LEVEL_KEY = 'aray_best_level_rio';
+const BEST_KEY = 'rio';
 
 // Canvas y contexto
 let canvas, ctx, dpr;
@@ -15,7 +14,7 @@ let animationId;
 
 // Cargar imagen de Aray
 const arayImage = new Image();
-arayImage.src = 'assets/img/personaje/aray_base.png';
+arayImage.src = 'img/personaje/aray_base.png';
 
 // Estado del juego
 const state = {
@@ -39,20 +38,24 @@ const state = {
 
 // Cargar imagen de fondo del río
 const riverBgImage = new Image();
-riverBgImage.src = 'assets/img/fondos/rio.png';
+riverBgImage.src = 'img/fondos/rio.png';
+
+// Cargar imagen de tronco
+const logImage = new Image();
+logImage.src = 'img/tronco1.png';
 
 // Configuración base de carriles (se ajusta según nivel)
 const getLanes = (level) => {
-  const speedMultiplier = 1 + (level - 1) * 0.2; // Aumenta 20% por nivel
+  const speedMultiplier = 0.5 + (level - 1) * 0.15; // Empieza más lento, aumenta 15% por nivel
   
   return [
     { type: 'safe', speed: 0 }, // Fila 0 (arriba - meta)
-    { type: 'water', speed: 1.2 * speedMultiplier, direction: 1 }, // Troncos →
-    { type: 'water', speed: 1.5 * speedMultiplier, direction: -1 }, // Troncos ←
-    { type: 'water', speed: 1.0 * speedMultiplier, direction: 1 }, // Troncos →
-    { type: 'water', speed: 1.4 * speedMultiplier, direction: -1 }, // Troncos ←
-    { type: 'water', speed: 1.3 * speedMultiplier, direction: 1 }, // Troncos →
-    { type: 'water', speed: 1.7 * speedMultiplier, direction: -1 }, // Troncos ←
+    { type: 'water', speed: 0.8 * speedMultiplier, direction: 1 }, // Troncos →
+    { type: 'water', speed: 1.0 * speedMultiplier, direction: -1 }, // Troncos ←
+    { type: 'water', speed: 0.7 * speedMultiplier, direction: 1 }, // Troncos →
+    { type: 'water', speed: 0.9 * speedMultiplier, direction: -1 }, // Troncos ←
+    { type: 'water', speed: 0.8 * speedMultiplier, direction: 1 }, // Troncos →
+    { type: 'water', speed: 1.1 * speedMultiplier, direction: -1 }, // Troncos ←
     { type: 'safe', speed: 0 }  // Fila 7 (abajo - inicio, césped)
   ];
 };
@@ -95,6 +98,11 @@ const resizeCanvas = () => {
 
 // Inicializar juego
 const initGame = () => {
+  // Limpiar animación de nivel si existe
+  if (typeof window !== 'undefined' && typeof window.hideLevelUpAnimation === 'function') {
+    window.hideLevelUpAnimation();
+  }
+  
   const width = canvas.width / dpr;
   const height = canvas.height / dpr;
   
@@ -116,9 +124,9 @@ const initGame = () => {
     onLog: null
   };
   
-  // Generar troncos iniciales (menos troncos, más espacio)
-  const numLogs = Math.max(2, 4 - Math.floor(state.level / 2));
-  const spacing = state.cellSize * (6 + state.level * 0.8); // Mucho más espacio entre troncos
+  // Generar troncos iniciales (más troncos, menos espacio)
+  const numLogs = Math.max(3, 5 - Math.floor(state.level / 3)); // Más troncos
+  const spacing = state.cellSize * (3 + state.level * 0.4); // Menos espacio entre troncos
   
   for (let row = 1; row < state.rows - 1; row++) {
     if (LANES[row].type === 'water') {
@@ -130,6 +138,68 @@ const initGame = () => {
   
   updateGameHUD();
   gameLoop();
+};
+
+// Verificar colisión con agua (función centralizada que siempre usa valores actuales)
+const checkWaterCollision = () => {
+  const currentLane = LANES[state.player.gridY];
+  if (currentLane && currentLane.type === 'water') {
+    // Siempre verificar con los troncos actuales (no usar referencias obsoletas)
+    let onLog = false;
+    let matchingLog = null;
+    
+    // Obtener posición actual del jugador
+    const playerPos = state.player.gridX;
+    
+    // Buscar tronco en la misma fila que contenga al jugador
+    for (const log of state.logs) {
+      if (log.row === state.player.gridY) {
+        // Calcular posición actual del tronco (en celdas)
+        // log.x está en pixels, convertimos a celdas
+        const logStart = log.x / state.cellSize;
+        // log.width ya está en celdas (no en pixels)
+        const logEnd = logStart + log.width;
+        
+        // Debug logging solo ocasionalmente para evitar spam
+        if (Math.random() < 0.05) { // 5% de probabilidad
+          console.log(`🔍 Verificando: jugador=${playerPos.toFixed(2)}, tronco fila=${log.row}, inicio=${logStart.toFixed(2)}, fin=${logEnd.toFixed(2)}, log.x=${log.x.toFixed(1)}px, log.width=${log.width.toFixed(2)}celdas`);
+        }
+        
+        // Verificar si el jugador está dentro del tronco (incluyendo bordes exactos)
+        // NO usar margen negativo porque puede causar falsos positivos
+        // El jugador debe estar estrictamente dentro del rango del tronco
+        if (playerPos >= logStart && playerPos <= logEnd) {
+          onLog = true;
+          matchingLog = log;
+          if (Math.random() < 0.05) { // 5% de probabilidad
+            console.log(`✅ Jugador EN tronco: pos=${playerPos.toFixed(2)}, tronco=${logStart.toFixed(2)}-${logEnd.toFixed(2)}`);
+          }
+          break;
+        }
+      }
+    }
+    
+    // Actualizar estado del jugador
+    if (onLog) {
+      state.player.onLog = matchingLog;
+    } else {
+      // El jugador está en agua sin tronco - GAME OVER
+      console.log(`❌ Jugador EN AGUA - terminando juego (fila ${state.player.gridY}, pos ${state.player.gridX.toFixed(2)})`);
+      console.log(`🔍 Troncos disponibles en esta fila:`, state.logs.filter(log => log.row === state.player.gridY).map(log => ({
+        row: log.row,
+        start: (log.x / state.cellSize).toFixed(2),
+        end: ((log.x / state.cellSize) + log.width).toFixed(2),
+        width: log.width.toFixed(2)
+      })));
+      state.player.onLog = null;
+      endGame('🌊 ¡Caíste al agua!');
+      return true; // Indica que el juego terminó
+    }
+  } else {
+    // No está en agua, resetear estado
+    state.player.onLog = null;
+  }
+  return false; // El juego continúa
 };
 
 // Crear tronco (con tamaño según nivel)
@@ -184,45 +254,43 @@ const gameLoop = () => {
     drawLog(log);
   }
   
-  // Actualizar jugador si está en un tronco
-  if (state.player.onLog) {
-    state.player.gridX += state.player.onLog.speed * state.player.onLog.direction / state.cellSize;
-    
-    // Game Over si sale de pantalla por los lados
-    if (state.player.gridX < -1 || state.player.gridX > state.cols) {
-      endGame('🌊 ¡Caíste al agua!');
-      return;
-    }
-  }
-  
-  // Verificar si está en agua sin tronco
+  // CRÍTICO: Primero verificar colisiones para encontrar el tronco ACTUAL (después de que los troncos se movieron)
+  // Luego mover el jugador con el tronco que realmente está debajo
   const currentLane = LANES[state.player.gridY];
   if (currentLane && currentLane.type === 'water') {
-    // Verificar si está sobre un tronco (con tolerancia mínima del 15%)
-    let onLog = false;
-    const tolerance = 0.15; // 15% de margen
-    
-    for (const log of state.logs) {
-      if (log.row === state.player.gridY) {
-        const logGridX = log.x / state.cellSize;
-        const logEnd = logGridX + log.width;
-        
-        // Comprobar si el jugador está sobre el tronco
-        if (state.player.gridX >= logGridX - tolerance && 
-            state.player.gridX <= logEnd + tolerance) {
-          onLog = true;
-          state.player.onLog = log;
-          break;
-        }
-      }
+    // Verificar colisiones para encontrar el tronco actual (si existe)
+    // Esta función actualizará state.player.onLog con el tronco correcto o retornará true si el juego terminó
+    if (checkWaterCollision()) {
+      // El juego terminó (jugador en agua sin tronco)
+      return;
     }
     
-    if (!onLog) {
-      state.player.onLog = null;
+    // Si el jugador está en un tronco, moverlo con ese tronco
+    if (state.player.onLog) {
+      // Mover jugador con el tronco ACTUAL (no el antiguo de state.player.onLog)
+      // Usar el tronco que acabamos de encontrar en checkWaterCollision()
+      state.player.gridX += state.player.onLog.speed * state.player.onLog.direction / state.cellSize;
+      
+      // Game Over si sale de pantalla por los lados
+      if (state.player.gridX < -1 || state.player.gridX > state.cols) {
+        endGame('🌊 ¡Caíste al agua!');
+        return;
+      }
+      
+      // Verificar de nuevo después de mover (por si se salió del tronco durante el movimiento)
+      if (checkWaterCollision()) {
+        // El jugador se salió del tronco durante el movimiento
+        return;
+      }
+    } else {
+      // El jugador está en agua pero no está en ningún tronco - esto NO debería pasar
+      // porque checkWaterCollision() debería haber terminado el juego
+      console.error('⚠️ ERROR CRÍTICO: Jugador en agua pero onLog es null!');
       endGame('🌊 ¡Caíste al agua!');
       return;
     }
   } else {
+    // No está en agua, resetear estado
     state.player.onLog = null;
   }
   
@@ -232,41 +300,41 @@ const gameLoop = () => {
     state.crossings++;
     state.score += 50 * state.level; // Más puntos en niveles altos
     
-    // Subir nivel cada 3 cruces
-    if (state.crossings % 3 === 0) {
-      state.level++;
-      
-      // Mostrar animación de nivel
-      if (typeof window !== 'undefined' && typeof window.showLevelUpAnimation === 'function') {
-        window.showLevelUpAnimation(state.level);
-      }
-      
-      LANES = getLanes(state.level);
-      
-      // Regenerar troncos con nueva velocidad y tamaño
-      state.logs = [];
-      
-      // Premio por subir nivel
-      addCandies(1);
-      celebrateCandyEarned();
-      const numLogs = Math.max(2, 4 - Math.floor(state.level / 2)); // Menos troncos en niveles altos
-      const spacing = state.cellSize * (6 + state.level * 0.8); // Mucho más espacio entre troncos
-      
-      for (let row = 1; row < state.rows - 1; row++) {
-        if (LANES[row].type === 'water') {
-          for (let i = 0; i < numLogs; i++) {
-            createLog(row, i * spacing);
-          }
+    // Subir nivel cada vez que cruza el río
+    state.level++;
+    
+    // Mostrar animación de nivel
+    if (typeof window !== 'undefined' && typeof window.showLevelUpAnimation === 'function') {
+      window.showLevelUpAnimation(state.level);
+    }
+    
+    // Actualizar configuración de carriles
+    LANES = getLanes(state.level);
+    
+    // Regenerar troncos con nueva velocidad y tamaño
+    state.logs = [];
+    
+    // Premio por subir nivel - caramelo cada cruce
+    addCandies(1);
+    celebrateCandyEarned();
+    
+    // Guardar progreso inmediatamente
+    setBest('rio', state.level);
+    saveScoreToServer('rio', state.level, { level: state.level, score: state.score, candies: getCandies() });
+    
+    const numLogs = Math.max(3, 5 - Math.floor(state.level / 3)); // Más troncos
+    const spacing = state.cellSize * (3 + state.level * 0.4); // Menos espacio entre troncos
+    
+    for (let row = 1; row < state.rows - 1; row++) {
+      if (LANES[row].type === 'water') {
+        for (let i = 0; i < numLogs; i++) {
+          createLog(row, i * spacing);
         }
       }
-      
-      // Subir nivel sin notificación visual
     }
     
     // Sonido y vibración
-    const audio = new Audio('assets/audio/ganar.mp3');
-    audio.volume = 0.5;
-    audio.play().catch(e => console.log('Audio no disponible'));
+    playAudioFile('audio/ganar.mp3', 0.5);
     
     vibrate([50, 30, 50, 30, 50]);
     
@@ -324,35 +392,48 @@ const drawBackground = (width, height) => {
 // Dibujar tronco
 const drawLog = (log) => {
   const x = log.x;
-  const y = log.row * state.cellSize + state.cellSize * 0.15 + state.offsetY;
+  const y = log.row * state.cellSize - state.cellSize * 0.1 + state.offsetY; // Subir más los troncos
   const w = log.width * state.cellSize;
-  const h = state.cellSize * 0.7;
+  const h = state.cellSize * 1.4; // Doble de altura (antes era 0.7)
   
-  // Tronco marrón
-  ctx.fillStyle = '#8B4513';
-  ctx.fillRect(x, y, w, h);
-  
-  // Textura de madera
-  ctx.strokeStyle = '#654321';
-  ctx.lineWidth = 2;
-  for (let i = 0; i < 3; i++) {
+  // Dibujar imagen de tronco si está cargada
+  if (logImage.complete && logImage.naturalWidth > 0) {
+    // Usar clipPath para crear forma orgánica del tronco
+    ctx.save();
     ctx.beginPath();
-    const lineY = y + h * (0.25 + i * 0.25);
-    ctx.moveTo(x, lineY);
-    ctx.lineTo(x + w, lineY);
-    ctx.stroke();
+    // Crear forma redondeada para el tronco
+    const radius = h * 0.3;
+    ctx.roundRect(x, y, w, h, radius);
+    ctx.clip();
+    
+    // Dibujar la imagen dentro del área recortada
+    ctx.drawImage(logImage, x, y, w, h);
+    ctx.restore();
+  } else {
+    // Fallback: tronco marrón orgánico si la imagen no está cargada
+    ctx.fillStyle = '#8B4513';
+    const radius = h * 0.3;
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, radius);
+    ctx.fill();
+    
+    // Textura de madera orgánica
+    ctx.strokeStyle = '#654321';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      const lineY = y + h * (0.25 + i * 0.25);
+      ctx.moveTo(x + radius, lineY);
+      ctx.lineTo(x + w - radius, lineY);
+      ctx.stroke();
+    }
   }
-  
-  // Borde
-  ctx.strokeStyle = '#5C3317';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(x, y, w, h);
 };
 
 // Dibujar jugador
 const drawPlayer = () => {
   const x = state.player.gridX * state.cellSize;
-  const y = state.player.gridY * state.cellSize + state.cellSize * 0.15 + state.offsetY;
+  const y = state.player.gridY * state.cellSize - state.cellSize * 0.1 + state.offsetY; // Subir el muñeco para alinearlo
   const size = state.cellSize * 0.7;
   
   if (arayImage.complete && arayImage.naturalWidth > 0) {
@@ -395,7 +476,19 @@ const setupControls = () => {
     if (newX !== state.player.gridX || newY !== state.player.gridY) {
       state.player.gridX = newX;
       state.player.gridY = newY;
-      state.player.onLog = null;
+      state.player.onLog = null; // Resetear antes de verificar
+      
+      // Verificar inmediatamente si está en agua sin tronco
+      const currentLane = LANES[state.player.gridY];
+      if (currentLane && currentLane.type === 'water') {
+        console.log(`🎮 Jugador se movió a fila ${state.player.gridY}, posición ${state.player.gridX.toFixed(2)} (AGUA)`);
+        if (checkWaterCollision()) {
+          return; // El juego terminó
+        }
+      } else {
+        // No está en agua, verificar colisiones de todas formas por seguridad
+        checkWaterCollision();
+      }
       
       playSound('click');
       vibrate(10);
@@ -416,19 +509,33 @@ const setupControls = () => {
     let newX = state.player.gridX;
     let newY = state.player.gridY;
     
+    // Calcular posición de Aray en pantalla
+    const arayScreenX = state.player.gridX * state.cellSize + state.cellSize / 2;
+    
     // Determinar dirección según dónde tocó respecto a Aray
-    if (y < arayScreenY) {
+    if (y < arayScreenY - state.cellSize * 0.3) {
       // Arriba de Aray = SUBIR
       newY = Math.max(0, state.player.gridY - 1);
-    } else {
+    } else if (y > arayScreenY + state.cellSize * 0.3) {
       // Abajo de Aray = BAJAR
       newY = Math.min(state.rows - 1, state.player.gridY + 1);
+    } else if (x < arayScreenX - state.cellSize * 0.3) {
+      // Izquierda de Aray = MOVER IZQUIERDA
+      newX = Math.max(0, state.player.gridX - 1);
+    } else if (x > arayScreenX + state.cellSize * 0.3) {
+      // Derecha de Aray = MOVER DERECHA
+      newX = Math.min(state.cols - 1, state.player.gridX + 1);
     }
     
     if (newX !== state.player.gridX || newY !== state.player.gridY) {
       state.player.gridX = newX;
       state.player.gridY = newY;
       state.player.onLog = null;
+      
+      // Verificar inmediatamente si está en agua sin tronco
+      if (checkWaterCollision()) {
+        return; // El juego terminó
+      }
       
       playSound('click');
       vibrate(10);
@@ -439,40 +546,37 @@ const setupControls = () => {
 };
 
 // End game
-const endGame = (reason = '🌊 ¡Caíste al agua!') => {
+const endGame = async (reason = '🌊 ¡Caíste al agua!') => {
   state.gameOver = true;
   cancelAnimationFrame(animationId);
   
-  const audio = new Audio('assets/audio/perder.mp3');
-  audio.volume = 0.5;
-  audio.play().catch(e => console.log('Audio no disponible'));
+  playAudioFile('audio/perder.mp3', 0.5);
   
   vibrate([200, 100, 200]);
   
-  const bestScore = getBest(BEST_KEY);
-  const isNewRecord = state.score > bestScore;
-  const bestLevel = getBest(BEST_LEVEL_KEY) || 1;
-  const isNewLevelRecord = state.level > bestLevel;
+  const bestLevel = await getBest('rio');
+  const isNewRecord = state.level > bestLevel;
   
   if (isNewRecord) {
-    setBest(BEST_KEY, state.level); // Guardar NIVEL, no score
-    saveScoreToServer('rio', state.score, { score: state.score, candies: getCandies() });
-  }
-  
-  if (isNewLevelRecord) {
-    localStorage.setItem(BEST_LEVEL_KEY, state.level.toString());
+    await setBest('rio', state.level);
+    saveScoreToServer('rio', state.level, { level: state.level, score: state.score, candies: getCandies() });
   }
   
   const overlay = document.getElementById('game-overlay');
   const content = overlay.querySelector('.game-overlay-content');
   
   content.innerHTML = `
-    <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem;">${reason}</h2>
-    <div class="game-stats" style="display: flex; justify-content: center; margin: 0.8rem 0;">
-      <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 120px;">
+    <h2 style="margin: 0 0 0.8rem 0; font-size: 1.4rem;">😅 Fin del juego</h2>
+    <div class="game-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 0.8rem 0;">
+      <div class="stat-card" style="background: linear-gradient(135deg, #ff6b9d, #c44569); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(255, 107, 157, 0.3); min-width: 100px;">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">PUNTOS</div>
+        <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.score}</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Puntos conseguidos</div>
+      </div>
+      <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 100px;">
         <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">NIVEL</div>
         <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.level}</div>
-        <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.level, parseInt(localStorage.getItem('aray_best_level_rio')) || 1)}</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.level, bestLevel)}</div>
       </div>
     </div>
     <div style="display: flex; justify-content: center; margin-top: 0.8rem;">
@@ -480,9 +584,21 @@ const endGame = (reason = '🌊 ¡Caíste al agua!') => {
     </div>
   `;
   
+  // Forzar estilos inline para que tenga fondo pero NO tape el header
+  const headerHeight = 60; // Altura fija del header
+  
+  overlay.style.position = 'absolute';
+  overlay.style.inset = `${headerHeight}px 0px 0px`;
+  overlay.style.width = '100%';
+  overlay.style.height = `calc(100% - ${headerHeight}px)`;
+  overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.75)';
+  overlay.style.display = 'flex';
+  overlay.style.alignItems = 'center';
+  overlay.style.justifyContent = 'center';
+  overlay.style.zIndex = '999'; // Menor que el header (1000)
+  
   overlay.classList.add('active');
   overlay.classList.remove('hidden');
-  overlay.style.display = 'flex';
   
   document.getElementById('btn-restart').addEventListener('click', () => {
     overlay.classList.remove('active');
@@ -493,11 +609,23 @@ const endGame = (reason = '🌊 ¡Caíste al agua!') => {
 };
 
 // Actualizar HUD
+let lastHUDUpdate = 0;
+const HUD_UPDATE_INTERVAL = 200; // Actualizar HUD cada 200ms en lugar de cada frame
+
 const updateGameHUD = () => {
-  const scoreEl = document.getElementById('hud-score');
+  const now = Date.now();
+  
+  // Solo actualizar si ha pasado suficiente tiempo
+  if (now - lastHUDUpdate < HUD_UPDATE_INTERVAL) {
+    return;
+  }
+  
+  lastHUDUpdate = now;
+  
+  const hudLevel = document.getElementById('hud-level');
   const candiesEl = document.getElementById('hud-candies');
   
-  if (scoreEl) scoreEl.textContent = `Nivel ${state.level}`;
+  if (hudLevel) hudLevel.textContent = `Nivel ${state.level}`;
   if (candiesEl) candiesEl.textContent = getCandies();
 };
 
@@ -509,19 +637,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initCommonUI();
   initCanvas();
   
-  const bestLevel = getBest(BEST_LEVEL_KEY) || 1;
-  const bestLevelEl = document.getElementById('best-level');
-  if (bestLevelEl) {
-    bestLevelEl.textContent = bestLevel;
-  }
-  
-  document.getElementById('btn-start').addEventListener('click', () => {
-    const overlay = document.getElementById('game-overlay');
-    overlay.classList.remove('active');
-    overlay.classList.add('hidden');
-    overlay.style.display = 'none';
-    initGame();
-  });
+  // El juego debe iniciarse automáticamente sin esperar al botón
+  // (ya no hay overlay inicial)
+  initGame();
   
   updateHUD();
 });

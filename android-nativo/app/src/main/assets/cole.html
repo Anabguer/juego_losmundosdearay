@@ -5,9 +5,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0e1320">
-  <link rel="icon" href="assets/img/logo.png">
+  <link rel="icon" href="img/logo.png">
   <title>🏫 Cole - Amigos VS Demonios</title>
-  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body class="game-cole">
   
@@ -16,8 +16,8 @@
     <a href="index.html" class="btn btn-outline btn-small">← Pueblo</a>
     <div class="hud-chips">
       <div class="chip">
-        <span class="chip-icon">🎯</span>
-        <span id="hud-score">0</span>
+        <span class="chip-icon">⭐</span>
+        <span id="hud-level">Nivel 1</span>
       </div>
       <div class="chip">
         <span class="chip-icon">🍬</span>
@@ -32,21 +32,10 @@
       <canvas id="game-canvas"></canvas>
     </div>
     
-    <!-- Overlay inicial -->
-    <div class="game-overlay active" id="game-overlay">
+    <!-- Overlay inicial - OCULTO por defecto, solo se muestra en game over -->
+    <div class="game-overlay hidden" id="game-overlay">
       <div class="game-overlay-content">
-        <h2>🧒 Amigos VS Demonios</h2>
-        <p>Toca a tus amigos y evita los demonios</p>
-        <div class="game-stats" style="display: flex; justify-content: center; margin: 0.8rem 0;">
-          <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.8rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 120px;">
-            <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">NIVEL MÁS ALTO</div>
-            <div style="font-size: 1.8rem; font-weight: bold; color: white;" id="best-score">1</div>
-            <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor logrado</div>
-          </div>
-        </div>
-        <button class="btn btn-primary" id="btn-start" style="margin-top: 0.8rem; padding: 0.6rem 1.2rem; font-size: 1rem;">
-          Comenzar
-        </button>
+        <!-- Contenido se genera dinámicamente -->
       </div>
     </div>
   </main>
@@ -56,33 +45,11 @@
   <script type="module" src="js/cole.js?v=5"></script>
   
   <script>
-// Hotfix: cerrar overlays y volver al pueblo
+// Script sencillo: volver al pueblo
 (function(){
-  if (!document.getElementById('hotfix-hidden-style')) {
-    const style = document.createElement('style');
-    style.id = 'hotfix-hidden-style';
-    style.textContent = `.hidden{display:none!important;pointer-events:none!important}`;
-    document.head.appendChild(style);
-  }
-
   const goPueblo = ()=> { window.location.href = 'index.html'; };
   document.getElementById('btnBack')?.addEventListener('click', goPueblo);
   document.getElementById('btnGoBack')?.addEventListener('click', goPueblo);
-
-  const startEl = document.getElementById('game-overlay');
-  document.getElementById('btn-start')?.addEventListener('click', ()=>{
-    startEl?.classList.remove('active');
-    startEl?.classList.add('hidden');
-  });
-
-  document.querySelectorAll('.modal[open]').forEach(m=>m.removeAttribute('open'));
-
-  window.addEventListener('keydown', (e)=>{
-    if(e.key==='Escape'){
-      startEl?.classList.add('hidden');
-      document.querySelectorAll('.modal[open]').forEach(m=>m.removeAttribute('open'));
-    }
-  });
 })();
 </script>
   

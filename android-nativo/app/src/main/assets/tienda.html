@@ -5,15 +5,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0e1320">
-  <link rel="icon" href="assets/img/logo.png">
+  <link rel="icon" href="img/logo.png">
   <title>🍬 Tienda - Match 3</title>
-  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="styles.css">
   <style>
     body.game-tienda {
-      background-image: url('assets/img/fondos/tienda.png');
+      background-image: url('img/fondos/tienda.png');
       background-size: cover;
       background-position: center;
       background-attachment: fixed;
+    }
+    /* Sobrescribir cualquier estilo inline de game-header */
+    .game-header {
+      top: 15px !important;
     }
   </style>
 </head>
@@ -24,8 +28,8 @@
     <a href="index.html" class="btn btn-outline btn-small">← Pueblo</a>
     <div class="hud-chips">
       <div class="chip">
-        <span class="chip-icon">📊</span>
-        <span id="hud-score">Nivel 1</span>
+        <span class="chip-icon">⭐</span>
+        <span id="hud-level">Nivel 1</span>
       </div>
       <div class="chip">
         <span class="chip-icon">🍬</span>
@@ -40,8 +44,8 @@
       <canvas id="game-canvas"></canvas>
     </div>
     
-    <!-- Overlay inicial -->
-    <div class="game-overlay active" id="game-overlay">
+    <!-- Overlay inicial - OCULTO por defecto, solo se muestra en game over -->
+    <div class="game-overlay hidden" id="game-overlay">
       <div class="game-overlay-content">
         <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem;">🍬 Match 3</h2>
         <p style="margin: 0 0 1rem 0; font-size: 0.9rem;">Haz match de 3 o más golosinas del mismo tipo</p>

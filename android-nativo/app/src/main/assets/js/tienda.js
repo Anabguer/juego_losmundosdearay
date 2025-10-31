@@ -4,9 +4,9 @@
    ======================================== */
 
 import { getCandies, addCandies, getBest, setBest, saveScoreToServer } from './storage.js';
-import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js?v=3';
+import { initCommonUI, updateHUD, toast, playSound, playAudioFile, vibrate, celebrateCandyEarned } from './ui.js';
 
-const BEST_KEY = 'aray_best_tienda';
+const BEST_KEY = 'tienda';
 
 // Canvas y contexto
 let canvas, ctx;
@@ -27,9 +27,9 @@ const state = {
   // Sistema de dificultad progresiva
   level: 1,
   matchCount: 0,
+  totalMatches: 0,
   combo: 0,
-  timeLeft: 90, // Tiempo límite en segundos
-  maxTime: 90,
+  // Sin límite de tiempo
   candyTypes: 6, // Empieza con 6 tipos
   // Sistema de bombas
   bombs: [], // [{row, col, timeLeft: 30}]
@@ -43,15 +43,19 @@ const CANDY_COLORS = ['#ff6b6b', '#4ecdc4', '#8b4513', '#ffb347', '#d2691e', '#f
 
 // ====== Init ======
 const initGame = () => {
+  // Limpiar animación de nivel si existe
+  if (typeof window !== 'undefined' && typeof window.hideLevelUpAnimation === 'function') {
+    window.hideLevelUpAnimation();
+  }
+  
   state.score = 0;
   state.selected = null;
   state.gameOver = false;
   state.isProcessing = false;
   state.level = 1;
   state.matchCount = 0;
+  state.totalMatches = 0;
   state.combo = 0;
-  state.timeLeft = 90;
-  state.maxTime = 90;
   state.candyTypes = 6;
   state.bombs = [];
   state.lastBombTime = 0;
@@ -60,46 +64,37 @@ const initGame = () => {
   generateBoard();
   updateGameHUD();
   
-  // Iniciar contador de tiempo
-  startTimer();
-  
   gameLoop();
 };
 
-// Timer
-let timerInterval = null;
+// Sistema de bombas sin timer de juego
 let gameTime = 0;
+let lastUpdateTime = null; // para delta real en segundos
 
-const startTimer = () => {
-  if (timerInterval) clearInterval(timerInterval);
-  gameTime = 0;
+const updateBombs = (deltaSeconds) => {
+  // Seguridad: limitar delta exagerado (p.ej. pestaña en background)
+  const dt = Math.min(Math.max(deltaSeconds || 0, 0), 0.25); // máx 250ms por frame
+  gameTime += dt;
+
+  // Actualizar tiempo de bombas
+  state.bombs.forEach(bomb => {
+    bomb.timeLeft -= dt;
+    if (bomb.timeLeft <= 0) {
+      // ¡BOMBA EXPLOTÓ!
+      explodeBomb(bomb);
+    }
+  });
+
+  // No crear bombas hasta el nivel 5
+  if (state.level < 5) {
+    return; // No hay bombas antes del nivel 5
+  }
   
-  timerInterval = setInterval(() => {
-    if (state.gameOver || state.isProcessing) return;
-    
-    state.timeLeft -= 0.1;
-    gameTime += 0.1;
-    
-    // Actualizar tiempo de bombas
-    state.bombs.forEach(bomb => {
-      bomb.timeLeft -= 0.1;
-      if (bomb.timeLeft <= 0) {
-        // ¡BOMBA EXPLOTÓ!
-        explodeBomb(bomb);
-      }
-    });
-    
-    // Crear nueva bomba cada X segundos
-    if (gameTime - state.lastBombTime >= state.bombInterval && state.bombs.length < 2) {
-      createBomb();
-      state.lastBombTime = gameTime;
-    }
-    
-    if (state.timeLeft <= 0) {
-      state.timeLeft = 0;
-      endGame();
-    }
-  }, 100);
+  // Crear nueva bomba cada X segundos (progresivo según nivel)
+  if (gameTime - state.lastBombTime >= state.bombInterval && state.bombs.length < 2) {
+    createBomb();
+    state.lastBombTime = gameTime;
+  }
 };
 
 // Crear bomba en posición aleatoria (solo contador visual)
@@ -127,10 +122,8 @@ const createBomb = () => {
 const explodeBomb = (bomb) => {
   state.gameOver = true;
   
-  // Sonido de explosión
-  const audio = new Audio('assets/audio/perder.mp3');
-  audio.volume = 0.7;
-  audio.play().catch(e => console.log('Audio no disponible'));
+  // Sonido de explosión (ruta unificada)
+  playAudioFile('audio/perder.mp3', 0.7);
   
   vibrate([200, 100, 200, 100, 200]);
   
@@ -222,6 +215,15 @@ const getRandomCandyNoMatch = (row, col) => {
 // Game loop
 const gameLoop = () => {
   if (state.gameOver) return;
+  
+  // Delta real basado en performance.now()
+  const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  if (lastUpdateTime === null) lastUpdateTime = now;
+  const deltaSeconds = (now - lastUpdateTime) / 1000;
+  lastUpdateTime = now;
+  
+  // Actualizar bombas con delta real
+  updateBombs(deltaSeconds);
   
   draw();
   
@@ -474,58 +476,59 @@ const handlePointerUp = (e) => {
 // Intercambiar candies
 const swapCandies = async (row1, col1, row2, col2) => {
   state.isProcessing = true;
-  
-  // Actualizar posición de bombas si se mueven
-  state.bombs.forEach(bomb => {
-    if (bomb.row === row1 && bomb.col === col1) {
-      bomb.row = row2;
-      bomb.col = col2;
-    } else if (bomb.row === row2 && bomb.col === col2) {
-      bomb.row = row1;
-      bomb.col = col1;
-    }
-  });
-  
-  // Swap
-  const temp = state.board[row1][col1];
-  state.board[row1][col1] = state.board[row2][col2];
-  state.board[row2][col2] = temp;
-  
-  await sleep(200);
-  
-  // Verificar matches
-  const matches = findAllMatches();
-  
-  if (matches.length > 0) {
-    // Válido
-    state.selected = null;
-    vibrate(50);
-    playSound('win');
-    
-    await processMatches();
-  } else {
-    // Inválido - revertir
-    const temp2 = state.board[row1][col1];
-    state.board[row1][col1] = state.board[row2][col2];
-    state.board[row2][col2] = temp2;
-    
-    // Revertir bombas también
+  try {
+    // Actualizar posición de bombas si se mueven
     state.bombs.forEach(bomb => {
-      if (bomb.row === row2 && bomb.col === col2) {
-        bomb.row = row1;
-        bomb.col = col1;
-      } else if (bomb.row === row1 && bomb.col === col1) {
+      if (bomb.row === row1 && bomb.col === col1) {
         bomb.row = row2;
         bomb.col = col2;
+      } else if (bomb.row === row2 && bomb.col === col2) {
+        bomb.row = row1;
+        bomb.col = col1;
       }
     });
-    
-    state.selected = null;
-    vibrate(20);
-    playSound('fail');
+
+    // Swap
+    const temp = state.board[row1][col1];
+    state.board[row1][col1] = state.board[row2][col2];
+    state.board[row2][col2] = temp;
+
+    await sleep(200);
+
+    // Verificar matches
+    const matches = findAllMatches();
+
+    if (matches.length > 0) {
+      // Válido
+      state.selected = null;
+      vibrate(50);
+      try { playSound('win'); } catch (e) { /* no-op */ }
+
+      await processMatches();
+    } else {
+      // Inválido - revertir
+      const temp2 = state.board[row1][col1];
+      state.board[row1][col1] = state.board[row2][col2];
+      state.board[row2][col2] = temp2;
+
+      // Revertir bombas también
+      state.bombs.forEach(bomb => {
+        if (bomb.row === row2 && bomb.col === col2) {
+          bomb.row = row1;
+          bomb.col = col1;
+        } else if (bomb.row === row1 && bomb.col === col1) {
+          bomb.row = row2;
+          bomb.col = col2;
+        }
+      });
+
+      state.selected = null;
+      vibrate(20);
+      try { playSound('fail'); } catch (e) { /* no-op */ }
+    }
+  } finally {
+    state.isProcessing = false;
   }
-  
-  state.isProcessing = false;
 };
 
 // Encontrar todos los matches
@@ -593,6 +596,7 @@ const processMatches = async () => {
     chainCount++;
     state.combo = chainCount;
     state.matchCount++;
+    state.totalMatches++;
     
     // Verificar si se hizo match con una bomba
     const bombMatched = state.bombs.find(b => 
@@ -611,10 +615,6 @@ const processMatches = async () => {
     const comboMultiplier = state.combo;
     const points = basePoints * comboMultiplier;
     state.score += points;
-    
-    // Bonus de tiempo por match (reducido)
-    const timeBonus = matches.length >= 5 ? 3 : matches.length >= 4 ? 2 : 1;
-    state.timeLeft = Math.min(state.timeLeft + timeBonus, state.maxTime);
     
     updateGameHUD();
     
@@ -645,41 +645,42 @@ const processMatches = async () => {
     
     await sleep(300);
     
-    // Sistema de nivel progresivo con animación
-    if (state.matchCount >= state.level * 5) {
-      state.level++;
-      state.matchCount = 0;
+    // Sistema de nivel basado en matches totales (como Yayos usa ratas matadas)
+    // Cada 10 matches = 1 nivel (1 caramelo por nivel)
+    const newLevel = Math.max(1, Math.floor(state.totalMatches / 10) + 1);
+    if (newLevel > state.level) {
+      const oldLevel = state.level;
+      state.level = newLevel;
+      
+      console.log(`🎉 ¡Subida de nivel! ${oldLevel} → ${newLevel} (Matches totales: ${state.totalMatches})`);
+      
+      // Aumentar dificultad: más tipos de golosinas
+      state.candyTypes = Math.min(8, 6 + Math.floor(state.level / 2));
+      
+      // Reducir tiempo de bombas progresivamente (solo a partir del nivel 5)
+      if (state.level >= 5) {
+        // Nivel 5: intervalo de 20 segundos, nivel 6: ~18s, nivel 7: ~17s, etc.
+        // Más progresivo: nivel 5 = 20s, nivel 10 = 15s, nivel 15 = 10s
+        const levelsAbove5 = state.level - 5;
+        state.bombInterval = Math.max(10, 20 - Math.floor(levelsAbove5 / 2));
+      } else {
+        // Mantener intervalo alto si no hemos llegado al nivel 5 (aunque no se usará)
+        state.bombInterval = 999; // Valor alto para asegurar que no se creen
+      }
+      
+      // Guardar nivel en localStorage y Firebase si supera el récord
+      updateFirebaseOnLevelUp(state.level);
+      
+      // Dar 1 caramelo por nivel
+      addCandies(1);
+      celebrateCandyEarned();
       
       // Mostrar animación de level up
       if (typeof window !== 'undefined' && typeof window.showLevelUpAnimation === 'function') {
         window.showLevelUpAnimation(state.level);
       }
       
-      // Aumentar dificultad
-      if (state.level % 3 === 0 && state.candyTypes < ALL_CANDY_TYPES.length) {
-        state.candyTypes++; // Más tipos de candy = más difícil
-      }
-    }
-    
-    // Premio de caramelos cada 1000 puntos (removido - solo por nivel)
-    // if (state.score > 0 && Math.floor(state.score / 1000) > Math.floor((state.score - points) / 1000)) {
-    //   addCandies(1);
-    //   celebrateCandyEarned();
-    // }
-    
-    // Nivel cada 1000 puntos
-    const newLevel = Math.max(1, Math.floor(state.score / 1000) + 1);
-    if (newLevel > state.level) {
-      state.level = newLevel;
-      // Aumentar dificultad: más tipos de golosinas
-      state.candyTypes = Math.min(8, 6 + Math.floor(state.level / 2));
-      // Reducir tiempo de bombas
-      state.bombInterval = Math.max(10, 20 - Math.floor(state.level / 3));
-      addCandies(1);
-      celebrateCandyEarned();
-      if (typeof window !== 'undefined' && typeof window.showLevelUpAnimation === 'function') {
-        window.showLevelUpAnimation(state.level);
-      }
+      updateGameHUD();
     }
   }
 };
@@ -723,42 +724,39 @@ const fillBoard = () => {
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // End game
-const endGame = (reason = '⏰ ¡Se acabó el tiempo!') => {
+const endGame = async (reason = '⏰ ¡Se acabó el tiempo!') => {
   state.gameOver = true;
   cancelAnimationFrame(animationId);
-  if (timerInterval) clearInterval(timerInterval);
+  if (typeof timerInterval !== 'undefined' && timerInterval) clearInterval(timerInterval);
   
   // Sonido de perder
-  const audio = new Audio('assets/audio/perder.mp3');
-  audio.volume = 0.5;
-  audio.play().catch(e => console.log('Audio no disponible'));
+  playAudioFile('audio/perder.mp3', 0.5);
   
   vibrate([200, 100, 200]);
   
-  const bestScore = getBest(BEST_KEY);
-  const isNewRecord = state.score > bestScore;
-  const bestLevel = parseInt(localStorage.getItem('aray_best_level_tienda')) || 1;
-  const isNewLevelRecord = state.level > bestLevel;
+  const bestLevel = await getBest('tienda');
+  const isNewRecord = state.level > bestLevel;
   
   if (isNewRecord) {
-    setBest(BEST_KEY, state.level); // Guardar NIVEL, no score
-    saveScoreToServer('tienda', state.score, { score: state.score, candies: getCandies() });
-  }
-  
-  if (isNewLevelRecord) {
-    localStorage.setItem('aray_best_level_tienda', state.level.toString());
+    await setBest('tienda', state.level); // Guardar NIVEL
+    saveScoreToServer('tienda', state.level, { level: state.level, score: state.score, candies: getCandies() });
   }
   
   const overlay = document.getElementById('game-overlay');
   const content = overlay.querySelector('.game-overlay-content');
   
   content.innerHTML = `
-    <h2>${reason}</h2>
-    <div class="game-stats" style="display: flex; justify-content: center; margin: 0.8rem 0;">
-      <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 120px;">
+    <h2 style="margin: 0 0 0.8rem 0; font-size: 1.4rem;">😅 Fin del juego</h2>
+    <div class="game-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 0.8rem 0;">
+      <div class="stat-card" style="background: linear-gradient(135deg, #ff6b9d, #c44569); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(255, 107, 157, 0.3); min-width: 100px;">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">COMBINACIONES</div>
+        <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.totalMatches}</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Total de combinaciones</div>
+      </div>
+      <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 100px;">
         <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">NIVEL</div>
         <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.level}</div>
-        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.level, parseInt(localStorage.getItem('aray_best_level_tienda')) || 1)}</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.level, bestLevel)}</div>
       </div>
     </div>
     <div style="display: flex; justify-content: center; margin-top: 0.8rem;">
@@ -766,9 +764,21 @@ const endGame = (reason = '⏰ ¡Se acabó el tiempo!') => {
     </div>
   `;
   
+  // Forzar estilos inline para que tenga fondo pero NO tape el header
+  const headerHeight = 60; // Altura fija del header
+  
+  overlay.style.position = 'absolute';
+  overlay.style.inset = `${headerHeight}px 0px 0px`;
+  overlay.style.width = '100%';
+  overlay.style.height = `calc(100% - ${headerHeight}px)`;
+  overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.75)';
+  overlay.style.display = 'flex';
+  overlay.style.alignItems = 'center';
+  overlay.style.justifyContent = 'center';
+  overlay.style.zIndex = '999'; // Menor que el header (1000)
+  
   overlay.classList.add('active');
   overlay.classList.remove('hidden');
-  overlay.style.display = 'flex';
   
   document.getElementById('btn-restart').addEventListener('click', () => {
     overlay.classList.remove('active');
@@ -780,40 +790,52 @@ const endGame = (reason = '⏰ ¡Se acabó el tiempo!') => {
 
 // Actualizar HUD
 const updateGameHUD = () => {
-  const scoreEl = document.getElementById('hud-score');
+  const hudLevel = document.getElementById('hud-level');
   const candiesEl = document.getElementById('hud-candies');
   
-  if (scoreEl) scoreEl.textContent = `Nivel ${state.level}`;
+  if (hudLevel) hudLevel.textContent = `Nivel ${state.level}`;
   if (candiesEl) candiesEl.textContent = getCandies();
 };
 
 window.updateHUD = updateGameHUD;
 
+// ========== FUNCIONES DE FIREBASE ==========
+
+// Función para actualizar Firebase cuando se sube de nivel (solo si superas el récord)
+const updateFirebaseOnLevelUp = async (newLevel) => {
+  try {
+    // Obtener el récord actual
+    const currentRecord = await getBest('tienda');
+    
+    if (newLevel > currentRecord) {
+      console.log(`🏆 ¡NUEVO RÉCORD! ${currentRecord} → ${newLevel}`);
+      
+      // Actualizar nivel máximo usando setBest (que maneja Firebase y localStorage)
+      const success = await setBest('tienda', newLevel);
+      
+      if (success) {
+        console.log(`✅ Firebase: Nuevo récord ${newLevel} guardado exitosamente en Tienda`);
+      } else {
+        console.warn(`⚠️ Firebase: Error guardando récord ${newLevel}`);
+      }
+      
+      // También guardar score para compatibilidad
+      saveScoreToServer('tienda', state.score, { level: newLevel, score: state.score, candies: getCandies() });
+    } else {
+      console.log(`📊 Nivel ${newLevel} alcanzado (récord: ${currentRecord}) - No se actualiza`);
+    }
+  } catch (error) {
+    console.error('❌ Firebase: Error actualizando nivel en Tienda:', error);
+  }
+};
+
 // ====== Init página ======
 document.addEventListener('DOMContentLoaded', () => {
   initCommonUI();
   
-  const bestLevel = getBest('aray_best_level_tienda') || 1;
-  
-  // Solo actualizar elementos que existen
-  const bestLevelEl = document.getElementById('best-level');
-  const bestScoreEl = document.getElementById('best-score');
-  const totalCandiesEl = document.getElementById('total-candies');
-  
-  if (bestLevelEl) {
-    bestLevelEl.textContent = bestLevel;
-  }
-  if (bestScoreEl) {
-    bestScoreEl.textContent = getBest(BEST_KEY);
-  }
-  if (totalCandiesEl) {
-    totalCandiesEl.textContent = getCandies();
-  }
-  
-  document.getElementById('btn-start').addEventListener('click', () => {
-    document.getElementById('game-overlay').classList.add('hidden');
-    initGame();
-  });
+  // El juego debe iniciarse automáticamente sin esperar al botón
+  // (ya no hay overlay inicial)
+  initGame();
   
   updateHUD();
 });

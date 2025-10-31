@@ -4,10 +4,9 @@
    ======================================== */
 
 import { getCandies, addCandies, getBest, setBest, saveScoreToServer } from './storage.js';
-import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js?v=3';
+import { initCommonUI, updateHUD, toast, playSound, playAudioFile, vibrate, celebrateCandyEarned } from './ui.js';
 
-const BEST_KEY = 'aray_best_edificio';
-const BEST_LEVEL_KEY = 'aray_best_level_edificio';
+const BEST_KEY = 'edificio';
 
 // Canvas y contexto
 let canvas, ctx, dpr;
@@ -15,18 +14,10 @@ let animationId;
 
 // Cargar imágenes
 const arayImage = new Image();
-arayImage.src = 'assets/img/personaje/aray_base.png';
+arayImage.src = 'img/personaje/aray_base.png';
 
 const roomImage = new Image();
-roomImage.src = 'assets/img/fondos/edificio.png';
-
-// Cargar imágenes de enemigos (zombies)
-const enemyImages = [];
-for (let i = 1; i <= 4; i++) {
-  const img = new Image();
-  img.src = `assets/img/enemigos/zombie${i}.png`;
-  enemyImages.push(img);
-}
+roomImage.src = 'img/fondos/edificio.png';
 
 // Estado del juego
 const state = {
@@ -43,18 +34,17 @@ const state = {
   platforms: [],
   cameraY: 0, // Posición de la cámara (cuánto ha subido)
   clouds: [], // Nubes decorativas
-  stars: [], // Estrellas decorativas
-  enemies: [] // Enemigos en plataformas
+  stars: [] // Estrellas decorativas
 };
 
 // Configuración
 const config = {
   platformWidth: 100,
   platformHeight: 15,
-  platformGap: 180, // Mucho más separadas para evitar choques
-  gravity: 0.6,
-  jumpPower: -17,
-  moveSpeed: 6
+  platformGap: 180, // Separación inicial más amplia
+  gravity: 0.5, // Gravedad moderada para control
+  jumpPower: -16, // Ligero aumento para cubrir huecos en nivel 3
+  moveSpeed: 4 // Reducido de 6 a 4 para movimiento más lento
 };
 
 // Tipos de plataformas
@@ -94,6 +84,11 @@ const resizeCanvas = () => {
 
 // Inicializar juego
 const initGame = () => {
+  // Limpiar animación de nivel si existe
+  if (typeof window !== 'undefined' && typeof window.hideLevelUpAnimation === 'function') {
+    window.hideLevelUpAnimation();
+  }
+  
   const width = canvas.width / dpr;
   const height = canvas.height / dpr;
   
@@ -172,13 +167,12 @@ const createPlatform = (width, absoluteY) => {
   let hasSpike = false;
   let spikePosition = null;
   
-  if (absoluteY < -200) { // Solo después del cuarto
+  // Plataformas móviles aparecen desde nivel 2 (~300 metros)
+  if (absoluteY < -300) { 
     if (rand < 0.2) {
       isMoving = true; // 20% plataformas móviles
-    } else if (rand < 0.35) {
-      hasEnemy = true; // 15% con enemigo
     }
-    // Pinchos eliminados
+    // Enemigos eliminados
   }
   
   const platform = {
@@ -188,7 +182,7 @@ const createPlatform = (width, absoluteY) => {
     height: config.platformHeight,
     typeIndex: typeIndex,
     isMoving: isMoving,
-    movingSpeed: isMoving ? 0.8 + Math.random() * 1.0 : 0, // Más lento
+    movingSpeed: isMoving ? 0.5 + Math.random() * 0.5 : 0, // Más lento (0.5–1.0)
     movingDirection: Math.random() > 0.5 ? 1 : -1,
     minX: 0,
     maxX: width - config.platformWidth,
@@ -198,27 +192,10 @@ const createPlatform = (width, absoluteY) => {
   
   state.platforms.push(platform);
   
-  // Crear enemigo si corresponde
-  if (hasEnemy) {
-    createEnemy(platform, absoluteY);
-  }
+  // Enemigos eliminados
 };
 
-// Crear enemigo en plataforma
-const createEnemy = (platform, platformY) => {
-  const enemyImage = enemyImages[Math.floor(Math.random() * enemyImages.length)];
-  
-  state.enemies.push({
-    x: platform.x + 10,
-    y: platformY - 40, // Encima de la plataforma
-    platformX: platform.x,
-    platformWidth: platform.width,
-    size: 35,
-    speed: 0.2 + Math.random() * 0.3, // Mucho más lento
-    direction: Math.random() > 0.5 ? 1 : -1,
-    image: enemyImage
-  });
-};
+// Función createEnemy eliminada
 
 // Game loop
 const gameLoop = () => {
@@ -307,9 +284,7 @@ const gameLoop = () => {
       s.y += scroll * 0.3; // Aún más lento
     });
     
-    state.enemies.forEach(e => {
-      e.y += scroll; // Se mueven con las plataformas
-    });
+    // Enemigos eliminados
   }
   
   // Actualizar plataformas móviles
@@ -328,28 +303,7 @@ const gameLoop = () => {
     }
   });
   
-  // Actualizar enemigos (se mueven con su plataforma)
-  state.enemies.forEach(enemy => {
-    // Encontrar la plataforma del enemigo
-    const platform = state.platforms.find(p => Math.abs(p.y - enemy.y - 40) < 5);
-    
-    if (platform) {
-      enemy.platformX = platform.x;
-      enemy.platformWidth = platform.width;
-    }
-    
-    // Mover enemigo de lado a lado en su plataforma
-    enemy.x += enemy.speed * enemy.direction;
-    
-    // Rebotar en los bordes de la plataforma
-    if (enemy.x < enemy.platformX) {
-      enemy.x = enemy.platformX;
-      enemy.direction = 1;
-    } else if (enemy.x + enemy.size > enemy.platformX + enemy.platformWidth) {
-      enemy.x = enemy.platformX + enemy.platformWidth - enemy.size;
-      enemy.direction = -1;
-    }
-  });
+  // Enemigos eliminados
   
   // Colisión con plataformas (solo cuando cae)
   if (state.player.vy > 0) {
@@ -369,22 +323,7 @@ const gameLoop = () => {
     }
   }
   
-  // Colisión con enemigos (área reducida, más justo)
-  for (const enemy of state.enemies) {
-    const margin = 15; // Margen de seguridad
-    
-    if (state.player.x + state.player.size - margin > enemy.x + margin &&
-        state.player.x + margin < enemy.x + enemy.size - margin &&
-        state.player.y + state.player.size - margin > enemy.y + margin &&
-        state.player.y + margin < enemy.y + enemy.size - margin) {
-      
-      // Game Over por demonio
-      endGame('👿 ¡Te atrapó un demonio!');
-      return;
-    }
-  }
-  
-  // Pinchos eliminados
+  // Colisión con enemigos eliminada
   
   // Actualizar score
   state.score = Math.floor(state.cameraY / 10);
@@ -427,28 +366,31 @@ const gameLoop = () => {
   // Eliminar estrellas que salieron abajo
   state.stars = state.stars.filter(s => s.y < height + 100);
   
-  // Eliminar enemigos que salieron abajo
-  state.enemies = state.enemies.filter(e => e.y < height + 100);
+  // Enemigos eliminados
   
-  // Dar caramelos
-  // Caramelo cada 100 puntos (removido - solo por nivel)
+  // Dar caramelos solo por subida de nivel (no cada 100 metros)
   // if (state.score > 0 && state.score % 100 === 0 && state.score !== state.lastCandyScore) {
   //   state.lastCandyScore = state.score;
   //   addCandies(1);
   //   celebrateCandyEarned();
   // }
   
-  // Nivel cada 500 metros
-  const newLevel = Math.max(1, Math.floor(state.score / 500) + 1);
+  // Nivel cada 150 metros
+  const newLevel = Math.max(1, Math.floor(state.score / 150) + 1);
   if (newLevel > state.level) {
     state.level = newLevel;
-    // Aumentar dificultad: más enemigos y plataformas más separadas
-    config.platformGap = Math.max(150, 180 - state.level * 5);
+    // Aumentar dificultad progresiva: más separación y gravedad gradual
+    config.platformGap = Math.max(120, 180 - state.level * 2); // Separación aumenta gradualmente
+    config.gravity = Math.min(0.7, 0.5 + state.level * 0.02); // Gravedad aumenta gradualmente
     addCandies(1);
     celebrateCandyEarned();
     if (typeof window !== 'undefined' && typeof window.showLevelUpAnimation === 'function') {
       window.showLevelUpAnimation(state.level);
     }
+    
+    // Guardar nivel inmediatamente cuando se sube
+    setBest('edificio', state.level);
+    saveScoreToServer('edificio', state.level, { level: state.level, score: state.score, candies: getCandies() });
   }
   
   // Dibujar nubes
@@ -555,35 +497,7 @@ const gameLoop = () => {
     }
   });
   
-  // Dibujar enemigos
-  state.enemies.forEach(enemy => {
-    ctx.save();
-    
-    // Voltear imagen según dirección
-    if (enemy.direction === -1) {
-      ctx.translate(enemy.x + enemy.size, enemy.y);
-      ctx.scale(-1, 1);
-      ctx.translate(-enemy.x - enemy.size, -enemy.y);
-    }
-    
-    if (enemy.image && enemy.image.complete && enemy.image.naturalWidth > 0) {
-      ctx.drawImage(
-        enemy.image,
-        enemy.x,
-        enemy.y,
-        enemy.size,
-        enemy.size
-      );
-    } else {
-      // Fallback: fantasma emoji
-      ctx.font = `${enemy.size}px Arial`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('👻', enemy.x + enemy.size / 2, enemy.y + enemy.size / 2);
-    }
-    
-    ctx.restore();
-  });
+  // Dibujar enemigos eliminado
   
   // Dibujar jugador con sombra
   ctx.save();
@@ -609,7 +523,7 @@ const gameLoop = () => {
   
   // Game Over si cae abajo
   if (state.player.y > height + 50) {
-    endGame();
+    endGame('💥 ¡Fin de juego por caída!');
     return;
   }
   
@@ -671,40 +585,38 @@ const setupControls = () => {
 };
 
 // End game
-const endGame = (reason = '💥 ¡Caíste!') => {
+const endGame = async (reason = '💥 ¡Caíste!') => {
   state.gameOver = true;
   cancelAnimationFrame(animationId);
   
-  const audio = new Audio('assets/audio/perder.mp3');
-  audio.volume = 0.5;
-  audio.play().catch(e => console.log('Audio no disponible'));
+  playAudioFile('audio/perder.mp3', 0.5);
   
   vibrate([200, 100, 200]);
   
-  const bestScore = getBest(BEST_KEY);
-  const isNewRecord = state.score > bestScore;
-  const bestLevel = getBest(BEST_LEVEL_KEY) || 1;
-  const isNewLevelRecord = state.level > bestLevel;
+  const bestLevel = await getBest('edificio');
+  const isNewRecord = state.level > bestLevel;
   
-  if (isNewRecord) {
-    setBest(BEST_KEY, state.level); // Guardar NIVEL, no score
-    saveScoreToServer('edificio', state.score, { score: state.score, candies: getCandies() });
-  }
-  
-  if (isNewLevelRecord) {
-    localStorage.setItem(BEST_LEVEL_KEY, state.level.toString());
+  // Siempre guardar el nivel actual si es mayor que el guardado
+  if (state.level > bestLevel) {
+    await setBest('edificio', state.level);
+    saveScoreToServer('edificio', state.level, { level: state.level, score: state.score, candies: getCandies() });
   }
   
   const overlay = document.getElementById('game-overlay');
   const content = overlay.querySelector('.game-overlay-content');
   
   content.innerHTML = `
-    <h2 style="margin: 0 0 0.5rem 0; font-size: 1.5rem;">${reason}</h2>
-    <div class="game-stats" style="display: flex; justify-content: center; margin: 0.8rem 0;">
-      <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 120px;">
+    <h2 style="margin: 0 0 0.8rem 0; font-size: 1.4rem;">${reason}</h2>
+    <div class="game-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 0.8rem 0;">
+      <div class="stat-card" style="background: linear-gradient(135deg, #ff6b9d, #c44569); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(255, 107, 157, 0.3); min-width: 100px;">
+        <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">PUNTOS</div>
+        <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.score}</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Puntos conseguidos</div>
+      </div>
+      <div class="stat-card" style="background: linear-gradient(135deg, #4ecdc4, #44a08d); padding: 0.6rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3); min-width: 100px;">
         <div style="font-size: 0.7rem; opacity: 0.9; margin-bottom: 0.3rem;">NIVEL</div>
         <div style="font-size: 1.6rem; font-weight: bold; color: white;">${state.level}</div>
-        <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.level, parseInt(localStorage.getItem('aray_best_level_edificio')) || 1)}</div>
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.2rem;">Mejor: ${Math.max(state.level, bestLevel)}</div>
       </div>
     </div>
     <div style="display: flex; justify-content: center; margin-top: 0.8rem;">
@@ -712,9 +624,21 @@ const endGame = (reason = '💥 ¡Caíste!') => {
     </div>
   `;
   
+  // Forzar estilos inline para que tenga fondo pero NO tape el header
+  const headerHeight = 60; // Altura fija del header
+  
+  overlay.style.position = 'absolute';
+  overlay.style.inset = `${headerHeight}px 0px 0px`;
+  overlay.style.width = '100%';
+  overlay.style.height = `calc(100% - ${headerHeight}px)`;
+  overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.75)';
+  overlay.style.display = 'flex';
+  overlay.style.alignItems = 'center';
+  overlay.style.justifyContent = 'center';
+  overlay.style.zIndex = '999'; // Menor que el header (1000)
+  
   overlay.classList.add('active');
   overlay.classList.remove('hidden');
-  overlay.style.display = 'flex';
   
   document.getElementById('btn-restart').addEventListener('click', () => {
     overlay.classList.remove('active');
@@ -726,10 +650,10 @@ const endGame = (reason = '💥 ¡Caíste!') => {
 
 // Actualizar HUD
 const updateGameHUD = () => {
-  const scoreEl = document.getElementById('hud-score');
+  const hudLevel = document.getElementById('hud-level');
   const candiesEl = document.getElementById('hud-candies');
   
-  if (scoreEl) scoreEl.textContent = `Nivel ${state.level}`;
+  if (hudLevel) hudLevel.textContent = `Nivel ${state.level}`;
   if (candiesEl) candiesEl.textContent = getCandies();
 };
 
@@ -740,16 +664,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initCommonUI();
   initCanvas();
   
-  const bestLevel = getBest(BEST_LEVEL_KEY) || 1;
-  const bestLevelEl = document.getElementById('best-level');
-  if (bestLevelEl) {
-    bestLevelEl.textContent = bestLevel;
-  }
-  
-  document.getElementById('btn-start').addEventListener('click', () => {
-    document.getElementById('game-overlay').classList.add('hidden');
-    initGame();
-  });
+  // El juego debe iniciarse automáticamente sin esperar al botón
+  // (ya no hay overlay inicial)
+  initGame();
   
   updateHUD();
 });

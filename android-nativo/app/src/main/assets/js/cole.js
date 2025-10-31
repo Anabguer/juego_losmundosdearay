@@ -4,9 +4,9 @@
    ======================================== */
 
 import { getCandies, addCandies, getBest, setBest, saveScoreToServer } from './storage.js';
-import { initCommonUI, updateHUD, toast, playSound, vibrate, celebrateCandyEarned } from './ui.js?v=3';
+import { initCommonUI, updateHUD, toast, playSound, playAudioFile, vibrate, celebrateCandyEarned } from './ui.js';
 
-const BEST_KEY = 'aray_best_cole';
+// BEST_KEY ya no se usa - usamos 'cole' directamente
 
 // Mensajes graciosos para game over
 const GAME_OVER_MESSAGES = {
@@ -42,26 +42,26 @@ const state = {
 
 // Personajes (usar imágenes si existen, sino emojis)
 const AMIGOS_IMGS = [
-  'assets/img/amigos/amigos1.png',
-  'assets/img/amigos/amigos2.png',
-  'assets/img/amigos/amigos3.png',
-  'assets/img/amigos/amigos4.png',
-  'assets/img/amigos/amigos5.png',
-  'assets/img/amigos/amigos6.png',
-  'assets/img/amigos/amigos7.png', // ARAY - aparece más
-  'assets/img/amigos/amigos7.png', // Duplicado para más probabilidad
-  'assets/img/amigos/amigos7.png', // Duplicado para más probabilidad
-  'assets/img/amigos/amigos7.png'  // Duplicado para más probabilidad (40% de probabilidad)
+  'img/amigos/amigos1.png',
+  'img/amigos/amigos2.png',
+  'img/amigos/amigos3.png',
+  'img/amigos/amigos4.png',
+  'img/amigos/amigos5.png',
+  'img/amigos/amigos6.png',
+  'img/amigos/amigos7.png', // ARAY - aparece más
+  'img/amigos/amigos7.png', // Duplicado para más probabilidad
+  'img/amigos/amigos7.png', // Duplicado para más probabilidad
+  'img/amigos/amigos7.png'  // Duplicado para más probabilidad (40% de probabilidad)
 ];
 
 const DEMONIOS = ['👹', '😈', '👺', '💀', '👻'];
 
 // Demonios como imágenes
 const DEMONIOS_IMGS = [
-  'assets/img/enemigos/zombie1.png',
-  'assets/img/enemigos/zombie2.png',
-  'assets/img/enemigos/zombie3.png',
-  'assets/img/enemigos/zombie4.png'
+  'img/enemigos/zombie1.png',
+  'img/enemigos/zombie2.png',
+  'img/enemigos/zombie3.png',
+  'img/enemigos/zombie4.png'
 ];
 
 // Precargar imágenes de amigos
@@ -99,24 +99,41 @@ const initCanvas = () => {
 
 const resizeCanvas = () => {
   const container = canvas.parentElement;
-  const width = container.clientWidth;
-  const height = container.clientHeight;
+  const width = container.clientWidth || window.innerWidth;
+  
+  // Calcular altura: ventana completa menos header
+  const header = document.querySelector('.game-header');
+  const headerHeight = header ? header.offsetHeight : 0;
+  const height = window.innerHeight - headerHeight;
+  
+  console.log(`📐 resizeCanvas() - Width: ${width}px, Height: ${height}px`);
   
   canvas.width = width * dpr;
   canvas.height = height * dpr;
   canvas.style.width = width + 'px';
   canvas.style.height = height + 'px';
   
+  console.log(`✅ Canvas redimensionado: ${width}x${height}px`);
+  
   ctx.scale(dpr, dpr);
 };
 
 // Inicializar juego
 const initGame = () => {
-  if (!canvas || !ctx) return;
+  if (!canvas || !ctx) {
+    console.error('❌ Canvas no inicializado');
+    return;
+  }
+  
+  // Limpiar animación de nivel si existe
+  if (typeof window !== 'undefined' && typeof window.hideLevelUpAnimation === 'function') {
+    window.hideLevelUpAnimation();
+  }
+  
+  console.log('🎮 Iniciando juego del cole...');
   
   state.score = 0;
   state.level = 1;
-  state.lives = state.maxLives;
   state.items = [];
   state.combo = 0;
   state.gameOver = false;
@@ -126,6 +143,8 @@ const initGame = () => {
   
   updateGameHUD();
   gameLoop();
+  
+  console.log('✅ Juego iniciado');
 };
 
 // Loop del juego
@@ -174,9 +193,7 @@ const levelUp = () => {
   state.nextLevelScore = state.score + config.pointsPerLevel;
   
   // Sonido de ganar nivel
-  const audio = new Audio('assets/audio/ganar.mp3');
-  audio.volume = 0.6;
-  audio.play().catch(e => console.log('Audio no disponible'));
+  playAudioFile('assets/audio/ganar.mp3', 0.6);
   
   vibrate([50, 30, 50]);
   toast(`🎉 ¡NIVEL ${state.level}! 🎉`, 2000);
@@ -266,9 +283,8 @@ const updateItems = (width, height) => {
       
       // Si era un amigo que se cayó → GAME OVER
       if (!item.isDemonio) {
-        const msg = GAME_OVER_MESSAGES.amigoLost[Math.floor(Math.random() * GAME_OVER_MESSAGES.amigoLost.length)];
-        toast(msg, 2000);
-        setTimeout(() => endGame(), 1000);
+        // No mostrar toast, ir directamente al overlay
+        setTimeout(() => endGame(), 500);
       }
     }
   }
@@ -303,30 +319,23 @@ const onCanvasClick = (e) => {
         zombieHitEffect(item.x, item.y);
         playSound('fail');
         vibrate([300, 100, 300]);
-        const msg = GAME_OVER_MESSAGES.demonio[Math.floor(Math.random() * GAME_OVER_MESSAGES.demonio.length)];
-        toast(msg, 2000);
-        setTimeout(() => endGame(), 1000);
+        // No mostrar toast, ir directamente al overlay
+        setTimeout(() => endGame(), 500);
       } else {
-        // ¡Tocó un amigo! Gana puntos
+        // ¡Tocó un amigo! Gana puntos (NO caramelos)
         const points = 10 + (state.combo * 5);
         state.score += points;
         state.combo++;
         state.lastComboTime = Date.now();
         
         // Sonido de premio amigos
-        const audio = new Audio('assets/audio/premioamigos.mp3');
-        audio.volume = 0.5;
-        audio.play().catch(e => console.log('Audio no disponible'));
+        playAudioFile('audio/premioamigos.mp3', 0.5);
         
         // Partículas brillantes al salvar a un amigo
         saveParticlesBurst(item.x, item.y);
         
-        // Golosina cada 50 puntos
-        if (state.score % 50 === 0) {
-          addCandies(1);
-          celebrateCandyEarned();
-          updateHUD();
-        }
+        // Actualizar HUD con los puntos
+        updateGameHUD();
         
         playSound('coin');
         vibrate(20);
@@ -446,27 +455,38 @@ const zombieHitEffect = (x, y) => {
 };
 
 // Fin del juego
-const endGame = () => {
+const endGame = async () => {
   state.gameOver = true;
   cancelAnimationFrame(animationId);
   
-  // Sonido de perder
-  const audio = new Audio('assets/audio/perder.mp3');
-  audio.volume = 0.5;
-  audio.play().catch(e => console.log('Audio no disponible'));
+  // Sonido de perder (ruta unificada)
+  playAudioFile('audio/perder.mp3', 0.5);
   
   vibrate([200, 100, 200]);
   
-  const bestLevel = getBest(BEST_KEY);
+  const bestLevel = await getBest('cole');
   const isNewRecord = state.level > bestLevel;
   
   if (isNewRecord) {
-    setBest(BEST_KEY, state.level);
+    await setBest('cole', state.level);
     saveScoreToServer('cole', state.level, { score: state.score, candies: getCandies() });
   }
   
   const overlay = document.getElementById('game-overlay');
   const content = overlay.querySelector('.game-overlay-content');
+  
+  // Forzar estilos inline para que tenga fondo pero NO tape el header
+  const headerHeight = 60; // Altura fija del header
+  
+  overlay.style.position = 'absolute';
+  overlay.style.inset = `${headerHeight}px 0px 0px`;
+  overlay.style.width = '100%';
+  overlay.style.height = `calc(100% - ${headerHeight}px)`;
+  overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.75)';
+  overlay.style.display = 'flex';
+  overlay.style.alignItems = 'center';
+  overlay.style.justifyContent = 'center';
+  overlay.style.zIndex = '999'; // Menor que el header (1000)
   
   content.innerHTML = `
     <h2 style="margin: 0 0 0.8rem 0; font-size: 1.4rem;">😅 Fin del juego</h2>
@@ -489,7 +509,6 @@ const endGame = () => {
   
   overlay.classList.add('active');
   overlay.classList.remove('hidden');
-  overlay.style.display = 'flex'; // Forzar visibilidad
   
   document.getElementById('btn-restart').addEventListener('click', () => {
     overlay.classList.remove('active');
@@ -525,11 +544,13 @@ const setupControls = () => {
 
 // Actualizar HUD
 const updateGameHUD = () => {
-  document.getElementById('hud-score').textContent = state.score;
-  document.getElementById('hud-candies').textContent = getCandies();
+  const hudLevel = document.getElementById('hud-level');
+  const hudCandies = document.getElementById('hud-candies');
+  if (hudLevel) hudLevel.textContent = `Nivel ${state.level}`;
+  if (hudCandies) hudCandies.textContent = getCandies();
 };
 
-// Override del updateHUD global
+// Override del updateHUD global para evitar spam en consola
 window.updateHUD = updateGameHUD;
 
 // Pausa cuando pierde foco
@@ -547,18 +568,13 @@ document.addEventListener('DOMContentLoaded', () => {
   initCanvas();
   setupControls();
   
-  // Mostrar stats iniciales
-  const bestLevel = getBest(BEST_KEY);
-  document.getElementById('best-score').textContent = bestLevel > 0 ? bestLevel : '1';
-  
-  // Botón start
-  document.getElementById('btn-start').addEventListener('click', () => {
-    const overlay = document.getElementById('game-overlay');
-    if (overlay) {
-      overlay.classList.remove('active');
-      overlay.style.display = 'none';
-    }
-    playSound('click');
-    initGame();
+  // Mostrar stats iniciales (async)
+  getBest('cole').then(bestLevel => {
+    const bestScoreEl = document.getElementById('best-score');
+    if (bestScoreEl) bestScoreEl.textContent = bestLevel > 0 ? bestLevel : '1';
   });
+  
+  // El juego debe iniciarse automáticamente sin esperar al botón
+  // (ya no hay overlay inicial)
+  initGame();
 });

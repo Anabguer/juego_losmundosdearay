@@ -10,16 +10,16 @@
 export const SPRITES = {
   // 🧒 Aray (niño protagonista)
   aray: {
-    base: 'assets/img/personaje/aray_base.png',
+    base: 'img/personaje/aray_base.png',
     run: [
-      'assets/img/personaje/aray_run1.png',
-      'assets/img/personaje/aray_run2.png'
+      'img/personaje/aray_run1.png',
+      'img/personaje/aray_run2.png'
     ],
     head: {
-      neutral: 'assets/img/personaje/aray_head_neutral.png?v=2',
-      happy: 'assets/img/personaje/aray_head_happy2.png?v=3',
-      angry: 'assets/img/personaje/aray_head_angry.png?v=2',
-      sleep: 'assets/img/personaje/aray_head_sleep.png?v=2',
+      neutral: 'img/personaje/aray_head_neutral.png?v=2',
+      happy: 'img/personaje/aray_head_happy2.png?v=3',
+      angry: 'img/personaje/aray_head_angry.png?v=2',
+      sleep: 'img/personaje/aray_head_sleep.png?v=2',
     }
   },
   

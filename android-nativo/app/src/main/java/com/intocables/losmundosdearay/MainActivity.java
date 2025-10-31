@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -11,6 +13,9 @@ import android.webkit.WebSettings;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import com.google.android.gms.ads.AdView;
 
 public class MainActivity extends AppCompatActivity {
@@ -23,7 +28,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Sin toolbar - pantalla completa
+        // Configurar modo inmersivo (pantalla completa)
+        setupImmersiveMode();
 
         // Configurar WebView
         webView = findViewById(R.id.webview);
@@ -39,8 +45,74 @@ public class MainActivity extends AppCompatActivity {
         // Crear bridge
         gameBridge = new GameBridge(this, adManager);
         webView.addJavascriptInterface(gameBridge, "GameBridge");
+        webView.addJavascriptInterface(this, "MainActivity");
         
         Log.d("MainActivity", "GameBridge configurado y añadido a WebView");
+        Log.d("MainActivity", "MainActivity también añadido como bridge");
+        Log.d("MainActivity", "GameBridge instance: " + gameBridge);
+        Log.d("MainActivity", "WebView instance: " + webView);
+    }
+
+    private void setupImmersiveMode() {
+        // Configurar para usar el nuevo sistema de insets
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        
+        // Obtener el controlador de insets
+        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        
+        // Configurar comportamiento de las barras del sistema
+        controller.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        
+        // Ocultar barras del sistema (barra de estado y navegación)
+        controller.hide(WindowInsetsCompat.Type.systemBars());
+        
+        // Mantener la pantalla encendida
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        
+        Log.d("MainActivity", "Modo inmersivo configurado");
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // Pausar música cuando la app se minimiza
+        if (webView != null) {
+            webView.evaluateJavascript(
+                "if (window.stopBackgroundMusic) window.stopBackgroundMusic();",
+                null
+            );
+            Log.d("MainActivity", "Música pausada en onPause");
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Re-aplicar modo inmersivo al volver a la actividad
+        setupImmersiveMode();
+        // Reanudar música cuando la app vuelve al primer plano (solo si estaba habilitada)
+        if (webView != null) {
+            webView.evaluateJavascript(
+                "(function() { " +
+                "  var musicEnabled = window.musicEnabled !== false && " +
+                "    (localStorage.getItem('musicEnabled') !== 'false'); " +
+                "  if (musicEnabled && window.playBackgroundMusic) { " +
+                "    window.playBackgroundMusic(); " +
+                "  } " +
+                "})();",
+                null
+            );
+            Log.d("MainActivity", "Verificando si debe reanudar música en onResume");
+        }
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) {
+            // Re-aplicar modo inmersivo cuando la ventana gana foco
+            setupImmersiveMode();
+        }
     }
 
     private void setupWebView() {
@@ -59,6 +131,11 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setBuiltInZoomControls(false);
         webSettings.setDisplayZoomControls(false);
         webSettings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.SINGLE_COLUMN);
+        
+        // Configuraciones específicas para audio
+        webSettings.setMediaPlaybackRequiresUserGesture(false);
+        webSettings.setAllowFileAccessFromFileURLs(true);
+        webSettings.setAllowUniversalAccessFromFileURLs(true);
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -87,8 +164,8 @@ public class MainActivity extends AppCompatActivity {
                 ".tile img { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; display: block !important; } " +
                 ".avatar { position: absolute; } " +
                 ".speech-bubble { max-width: 90vw; word-wrap: break-word; } " +
-                ".hud-stats, .stat-item, .stat-icon, .stat-value { font-size: 14px !important; line-height: 1.4 !important; } " +
-                ".game-header { position: fixed !important; top: 10px !important; left: 20px !important; right: 20px !important; z-index: 1000 !important; transform: scale(0.9) !important; transform-origin: top center !important; } " +
+                ".hud-stats, .stat-item, .stat-icon, .stat-value { font-size: 16px !important; line-height: 1.4 !important; } " +
+                ".game-header { position: fixed !important; top: 0 !important; left: 20px !important; right: 20px !important; z-index: 1000 !important; transform: scale(0.9) !important; transform-origin: top center !important; } " +
                 ".guide-text, .guide-subtitle { font-size: 16px !important; top: 15px !important; left: 50% !important; transform: translateX(-50%) !important; z-index: 1001 !important; } " +
                 ".guide-subtitle { font-size: 12px !important; top: 35px !important; } " +
                 "html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; height: 100% !important; }";
@@ -148,5 +225,11 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(this, LoginActivity.class);
             startActivityForResult(intent, 1001);
         }
+    }
+
+    // Método de prueba para verificar el bridge
+    @JavascriptInterface
+    public void testBridge() {
+        Log.e("MainActivity", "🧪🧪🧪 testBridge() LLAMADO desde JavaScript 🧪🧪🧪");
     }
 }

@@ -12,8 +12,8 @@ if not exist "app\build.gradle" (
 REM Verificar google-services.json
 if not exist "app\google-services.json" (
     echo ❌ Error: No se encuentra app\google-services.json
-    echo Copiando desde pueblito...
-    copy "..\pueblito\google-services.json" "app\"
+    echo Copiando desde raíz...
+    copy "..\google-services.json" "app\"
     if not exist "app\google-services.json" (
         echo ❌ Error: No se pudo copiar google-services.json
         pause

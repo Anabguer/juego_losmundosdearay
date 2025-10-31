@@ -23,6 +23,8 @@ import {
   getDocs
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { auth, db, addToSyncQueue } from './firebase-config.js';
+import { getUserRef, getNickRef, APP_ID } from './firebase-constants.js';
+import { syncToFirebase } from './storage.js';
 
 // Estado global del usuario
 let currentUser = null;
@@ -40,7 +42,7 @@ export const onAuthChange = (callback) => {
 export const initializeGoogleAuth = async () => {
   try {
     await GoogleAuth.initialize({
-      clientId: '989954746255-gpudi6ehmo4o7drku379b71kudr5t526.apps.googleusercontent.com',
+      clientId: '989954746255-e6gfghahanjo4q8vggkuoafvk2iov6n0.apps.googleusercontent.com',
       scopes: ['profile', 'email'],
       grantOfflineAccess: true,
     });
@@ -71,6 +73,19 @@ export const signInWithGoogle = async () => {
     // Crear o actualizar usuario en Firestore
     await createOrUpdateUser(user);
     
+    // Migrar datos de invitado a Firebase después del login
+    // IMPORTANTE: Ejecutar PRIMERO para evitar que otras sincronizaciones sobrescriban
+    console.log('🔄 Migrando datos de invitado a Firebase PRIMERO...');
+    setTimeout(async () => {
+      try {
+        console.log('📤 EJECUTANDO syncToFirebase() inmediatamente después del login...');
+        await syncToFirebase();
+        console.log('✅ Migración de datos de invitado completada - Firebase actualizado');
+      } catch (error) {
+        console.warn('⚠️ Error en migración de datos:', error);
+      }
+    }, 500); // Reducir a 500ms para ejecutar ANTES que initAutoSync
+    
     return { success: true, user };
     
   } catch (error) {
@@ -95,7 +110,7 @@ export const signOut = async () => {
 
 // Crear o actualizar usuario en Firestore
 const createOrUpdateUser = async (user) => {
-  const userRef = doc(db, 'users', user.uid);
+  const userRef = getUserRef(db, user.uid);
   const userSnap = await getDoc(userRef);
   
   if (!userSnap.exists()) {
@@ -205,10 +220,34 @@ onAuthStateChanged(auth, async (user) => {
     }
     
     console.log('👤 Usuario autenticado:', user.uid);
+    
+    // Migrar datos de invitado a Firebase cuando se detecta el login
+    // Solo si hay GameBridge disponible (modo Android)
+    if (window.GameBridge && window.GameBridge.isUserLoggedIn && window.GameBridge.isUserLoggedIn()) {
+      console.log('🔄 Detectado login - migrando datos de invitado a Firebase PRIMERO...');
+      // IMPORTANTE: Ejecutar INMEDIATAMENTE para evitar que syncBidirectional sobrescriba
+      setTimeout(async () => {
+        try {
+          console.log('📤 EJECUTANDO syncToFirebase() para subir datos de invitado ANTES de cualquier otra sincronización...');
+          await syncToFirebase();
+          console.log('✅ Migración de datos de invitado completada - Firebase actualizado con datos de invitado');
+        } catch (error) {
+          console.warn('⚠️ Error en migración de datos:', error);
+        }
+      }, 500); // Reducir a 500ms para ejecutar ANTES que syncBidirectional
+    }
   } else {
+    // Usuario desautenticado - resetear datos si estamos en Android
+    const wasLoggedIn = currentUser !== null;
     currentUser = null;
     userData = null;
     console.log('👤 Usuario desautenticado');
+    
+    // Si había un usuario logueado antes y ahora no lo hay, resetear datos
+    if (wasLoggedIn && window.GameBridge && typeof window.resetDataOnLogout === 'function') {
+      console.log('🔄 Usuario cerró sesión - reseteando datos de localStorage...');
+      window.resetDataOnLogout();
+    }
   }
   
   notifyAuthCallbacks();

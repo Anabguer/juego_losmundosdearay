@@ -10,7 +10,7 @@ let isMusicPlaying = false;
 const initBackgroundMusic = () => {
   if (backgroundMusic) return;
   
-  backgroundMusic = new Audio('assets/audio/background.mp3');
+  backgroundMusic = new Audio('audio/background.mp3');
   backgroundMusic.loop = true;
   backgroundMusic.volume = 0.3; // Volumen moderado
   backgroundMusic.preload = 'auto';
@@ -23,6 +23,17 @@ const initBackgroundMusic = () => {
 
 // Función para reproducir música
 const playBackgroundMusic = () => {
+  // Verificar si las preferencias están cargadas y la música está habilitada
+  if (window.musicEnabled === null || window.musicEnabled === undefined) {
+    console.log('🔇 Preferencias de música no cargadas aún, no reproduciendo');
+    return;
+  }
+  
+  if (!window.musicEnabled) {
+    console.log('🔇 Música deshabilitada por preferencias del usuario');
+    return;
+  }
+  
   if (!backgroundMusic) {
     initBackgroundMusic();
   }
@@ -80,7 +91,7 @@ const isInGame = () => {
 // Función para manejar el cambio de página
 const handlePageChange = () => {
   if (isInGame()) {
-    // Estamos en un juego, reproducir música
+    // Estamos en un juego, reproducir música solo si está habilitada
     playBackgroundMusic();
   } else {
     // No estamos en un juego, pausar música
@@ -99,7 +110,8 @@ window.addEventListener('popstate', handlePageChange);
 
 // Función para activar música con interacción del usuario
 const enableMusic = () => {
-  if (backgroundMusic && backgroundMusic.paused) {
+  // Solo activar si la música está habilitada en las preferencias
+  if (window.musicEnabled && backgroundMusic && backgroundMusic.paused) {
     playBackgroundMusic();
   }
 };

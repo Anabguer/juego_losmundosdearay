@@ -11,6 +11,7 @@ const BEST_KEY = 'rio';
 // Canvas y contexto
 let canvas, ctx, dpr;
 let animationId;
+window.animationId = null; // Exponer globalmente para pausa desde Android
 
 // Cargar imagen de Aray
 const arayImage = new Image();
@@ -219,6 +220,11 @@ const createLog = (row, offsetX) => {
 const gameLoop = () => {
   if (state.gameOver) return;
   
+  // Verificar si el juego está pausado (desde anuncios)
+  if (window._isGamePaused === true) {
+    return; // No ejecutar el loop si está pausado
+  }
+  
   const width = canvas.width / dpr;
   const height = canvas.height / dpr;
   
@@ -351,7 +357,29 @@ const gameLoop = () => {
   // Dibujar jugador
   drawPlayer();
   
-  animationId = requestAnimationFrame(gameLoop);
+  // Solo continuar el loop si no está pausado
+  if (window._isGamePaused !== true) {
+    animationId = requestAnimationFrame(gameLoop);
+    window.animationId = animationId; // Exponer globalmente
+  }
+};
+
+// Funciones globales para pausar/reanudar desde Android
+window.gamePause = () => {
+  window._isGamePaused = true;
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+    window.animationId = null;
+  }
+};
+
+window.gameResume = () => {
+  window._isGamePaused = false;
+  // Reanudar el gameLoop si el juego está corriendo y no está gameOver
+  if (!state.gameOver && !animationId) {
+    gameLoop();
+  }
 };
 
 // Dibujar fondo

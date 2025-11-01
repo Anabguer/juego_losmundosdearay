@@ -113,18 +113,37 @@ const showLevelUpAnimation = (newLevel) => {
     overlay.appendChild(levelText);
     document.body.appendChild(overlay);
     
-    // Cargar y reproducir animación Lottie
-    const animation = lottie.loadAnimation({
-      container: animationContainer,
-      renderer: 'svg',
-      loop: false,
-      autoplay: true,
-      path: 'assets/Level Up.json'
-    });
+    // Guardar el momento en que se creó el overlay
+    const overlayCreated = Date.now();
+    
+    // Ocultar el contenedor de animación por defecto (el archivo Level Up.json no existe)
+    animationContainer.style.display = 'none';
+    
+    let overlayRemoved = false;
+    
+    // Función para ocultar el overlay de forma segura
+    const hideOverlay = () => {
+      if (overlayRemoved) return;
+      overlayRemoved = true;
+      
+      const existingOverlay = document.getElementById('levelup-overlay');
+      if (existingOverlay && existingOverlay.parentNode) {
+        existingOverlay.style.opacity = '0';
+        existingOverlay.style.transition = 'opacity 0.3s ease-out';
+        setTimeout(() => {
+          if (existingOverlay.parentNode) {
+            existingOverlay.parentNode.removeChild(existingOverlay);
+          }
+        }, 300);
+      }
+    };
+    
+    // No intentar cargar la animación Lottie ya que el archivo no existe
+    // Si en el futuro se añade el archivo, se puede habilitar aquí
     
     // Reproducir sonido de nivel up
     if (window.playAudioFile) {
-      window.playAudioFile('assets/audio/ganar.mp3', 0.7);
+      window.playAudioFile('audio/ganar.mp3', 0.7);
     }
     
     // Vibrar para celebrar
@@ -132,32 +151,10 @@ const showLevelUpAnimation = (newLevel) => {
       navigator.vibrate([200, 100, 200, 100, 200]);
     }
     
-    // Remover overlay después de la animación
-    animation.addEventListener('complete', () => {
-      setTimeout(() => {
-        overlay.style.opacity = '0';
-        overlay.style.transition = 'opacity 0.5s ease-out';
-        setTimeout(() => {
-          if (overlay.parentNode) {
-            overlay.parentNode.removeChild(overlay);
-          }
-        }, 500);
-      }, 600); // Mostrar texto por 0.6 segundos adicionales después de la animación
-    });
-    
-    // También remover después de un tiempo máximo (por si la animación falla o tarda mucho)
+    // Remover overlay después de 1.5 segundos SIEMPRE (por si la animación falla o no existe)
     setTimeout(() => {
-      const existingOverlay = document.getElementById('levelup-overlay');
-      if (existingOverlay && existingOverlay.parentNode) {
-        existingOverlay.style.opacity = '0';
-        existingOverlay.style.transition = 'opacity 0.5s ease-out';
-        setTimeout(() => {
-          if (existingOverlay.parentNode) {
-            existingOverlay.parentNode.removeChild(existingOverlay);
-          }
-        }, 500);
-      }
-    }, 3000); // Máximo 3 segundos totales
+      hideOverlay();
+    }, 1500); // Mostrar texto por 1.5 segundos
   });
 };
 

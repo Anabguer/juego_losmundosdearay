@@ -224,7 +224,7 @@ const levelUp = () => {
   state.nextLevelScore = state.score + config.pointsPerLevel;
   
   // Sonido de ganar nivel
-  playAudioFile('assets/audio/ganar.mp3', 0.6);
+  playAudioFile('audio/ganar.mp3', 0.6);
   
   vibrate([50, 30, 50]);
   toast(`🎉 ¡NIVEL ${state.level}! 🎉`, 2000);

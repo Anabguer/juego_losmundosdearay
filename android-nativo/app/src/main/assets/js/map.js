@@ -144,11 +144,11 @@ export const initMap = () => {
   window.updateAvatarPosition = updateAvatarPosition;
 
   // Si el avatar no está sobre carretera, colócalo en la carretera adyacente
-  console.log(`🚀 Posición inicial del avatar: fila=${avatarPos.row}, col=${avatarPos.col}`);
+
   const startRoad = ensureRoadStart(avatarPos.row, avatarPos.col);
-  console.log(`🛣️ Carretera encontrada: fila=${startRoad[0]}, col=${startRoad[1]}`);
+
   avatarPos = { row: startRoad[0], col: startRoad[1] };
-  console.log(`✅ Avatar posicionado en: fila=${avatarPos.row}, col=${avatarPos.col}`);
+
   
   // Mostrar logs en pantalla para debug
   showAraySpeech(`Posición: ${avatarPos.row},${avatarPos.col}`, 3000);
@@ -250,7 +250,6 @@ const renderMap = () => {
       if (isBuilding(code)) {
         tile.classList.add('clickable');
         tile.addEventListener('click', () => {
-          console.log(`🏢 Edificio en: ${rowLetters[row]}${col} (fila=${row}, col=${col})`);
           onBuildingClick(row, col, code);
         });
         
@@ -261,7 +260,7 @@ const renderMap = () => {
       // Pieza de Ajustes (código 16) - clickable
       if (code === 16) {
         tile.addEventListener('click', async () => {
-          console.log(`⚙️ Ajustes clickeado en: ${rowLetters[row]}${col}`);
+
           
           // Buscar carretera adyacente
           const adjRoad = findNearestRoad(row, col);
@@ -328,7 +327,6 @@ const renderMap = () => {
         if (isBuilding(buildingCode)) {
           tile.classList.add('clickable');
           tile.addEventListener('click', () => {
-            console.log(`🏢 Edificio (parte) en: ${rowLetters[row]}${col} → lleva a ${rowLetters[mainBuildingRow]}${mainBuildingCol}`);
             onBuildingClick(mainBuildingRow, mainBuildingCol, buildingCode);
           });
         }
@@ -337,30 +335,26 @@ const renderMap = () => {
       // (Debug útil) Permite tocar una carretera y caminar hasta ella
       if (code === 1 || code === 10 || code === 12) {
         tile.addEventListener('click', async () => {
-          console.log(`🛣️ Carretera: ${rowLetters[row]}${col} (fila=${row}, col=${col})`);
-          console.log(`📍 Avatar actual: fila=${avatarPos.row}, col=${avatarPos.col}`);
           if (isMoving) return;
           resetBoredTimer(); // Reiniciar contador
           const start = [avatarPos.row, avatarPos.col]; // Usar posición actual del avatar
           const goal = [row, col];
-          console.log(`🎯 Inicio: [${start[0]}, ${start[1]}], Meta: [${goal[0]}, ${goal[1]}]`);
+
           const path = findPath(MAP, start, goal);
-          console.log(`🛤️ Path encontrado:`, path);
+
           if (!path) { toast('No hay camino por carretera'); return; }
           if (!consumeEnergy(path.length - 1)) return;
           isMoving = true; 
-          console.log(`🚶 Iniciando movimiento...`);
+
           await walkPath(path); 
-          console.log(`✅ Movimiento completado. Avatar final: fila=${avatarPos.row}, col=${avatarPos.col}`);
+
           isMoving = false;
         });
       }
       
       // Click en césped/vacío
       if (code === 0) {
-        tile.addEventListener('click', () => {
-          console.log(`🌱 Césped: ${rowLetters[row]}${col} (fila=${row}, col=${col})`);
-        });
+        // Sin acción
       }
 
       mapEl.appendChild(tile);
@@ -491,11 +485,10 @@ export const updateAvatarPosition = () => {
     const startRoad = ensureRoadStart(Math.max(0, Math.min(MAP_HEIGHT-1, avatarPos.row)), 
                                      Math.max(0, Math.min(MAP_WIDTH-1, avatarPos.col)));
     avatarPos = { row: startRoad[0], col: startRoad[1] };
-    console.log('✅ Posición corregida a:', avatarPos);
+
   }
 
   const rect = mapEl.getBoundingClientRect();
-  console.log(`🗺️ Map rect: ${rect.width.toFixed(1)}x${rect.height.toFixed(1)}px, top: ${rect.top.toFixed(1)}px, left: ${rect.left.toFixed(1)}px`);
   
   // Calcular tamaño de cada celda basado en el grid CSS
   const cellW = rect.width / MAP_WIDTH;
@@ -508,10 +501,6 @@ export const updateAvatarPosition = () => {
   // Posición del avatar (centrado en la celda, ajustado un poco más arriba)
   const x = rect.left + (avatarPos.col * cellW) + (cellW - avatarW) / 2;
   const y = rect.top + (avatarPos.row * cellH) + (cellH - avatarH) / 2 - (cellH * 0.1); // Subir un 10% de la altura de la celda
-
-  console.log(`🎨 Avatar pos: fila=${avatarPos.row}, col=${avatarPos.col}`);
-  console.log(`📐 Celda: ${cellW.toFixed(1)}x${cellH.toFixed(1)}px`);
-  console.log(`📍 Avatar: x=${x.toFixed(1)}px, y=${y.toFixed(1)}px, size=${avatarW.toFixed(1)}x${avatarH.toFixed(1)}px`);
 
   // Aplicar posición absoluta respecto al viewport
   avatar.style.position = 'fixed';
@@ -526,16 +515,16 @@ export const walkPath = async (path, stepMs = 160) => {
   const avatar = document.getElementById('avatar');
   avatar?.classList.remove('idle'); // Quitar animación al moverse
   
-  console.log(`🚶 walkPath iniciado con ${path.length} pasos:`, path);
+
   
   for (let i = 1; i < path.length; i++) {
     const [r, c] = path[i];
-    console.log(`👣 Paso ${i}/${path.length-1}: moviendo a [${r}, ${c}]`);
+
     
     // Validar que la posición esté dentro de los límites
     if (r >= 0 && r < MAP_HEIGHT && c >= 0 && c < MAP_WIDTH) {
       avatarPos = { row: r, col: c };
-      console.log(`📍 AvatarPos actualizado a: fila=${avatarPos.row}, col=${avatarPos.col}`);
+
       updateAvatarPosition();
       updateAvatarExpression(); // Actualizar expresión durante el movimiento
     } else {
@@ -549,7 +538,7 @@ export const walkPath = async (path, stepMs = 160) => {
     await new Promise(res => setTimeout(res, stepMs));
   }
   
-  console.log(`🏁 walkPath completado. Avatar final: fila=${avatarPos.row}, col=${avatarPos.col}`);
+
   avatar?.classList.add('idle'); // Reactivar animación al terminar
 };
 
@@ -589,7 +578,7 @@ const onBuildingClick = async (row, col, buildingType) => {
       setTimeout(async () => await showBuildingModal(buildingType, buildingName), 200);
       return;
     }
-    console.log('Start:', startRoad, 'Goal:', goalRoad);
+
     toast('No hay camino por carretera'); 
     return; 
   }
@@ -710,32 +699,32 @@ const animateCookieToAray = () => {
 
 // ====== Helpers: carreteras y BFS ======
 const ensureRoadStart = (row, col) => {
-  console.log(`🔍 ensureRoadStart: buscando carretera desde fila=${row}, col=${col}`);
-  console.log(`🗺️ Código en esa posición: ${MAP[row][col]}`);
+
+
   
   // Si ya es carretera, perfecto
   if (MAP[row][col] === 1) {
-    console.log(`✅ Ya está en carretera`);
+
     return [row, col];
   }
   
   // Busca carretera adyacente (4 dir)
   const near = findNearestRoad(row, col);
   if (near) {
-    console.log(`🛣️ Carretera adyacente encontrada: fila=${near[0]}, col=${near[1]}`);
+
     return near;
   }
   
   // Fallback: primera carretera del mapa
-  console.log(`🔍 Buscando primera carretera del mapa...`);
+
   for (let r=0;r<MAP_HEIGHT;r++) for (let c=0;c<MAP_WIDTH;c++)
     if (MAP[r][c]===1) {
-      console.log(`🛣️ Primera carretera encontrada: fila=${r}, col=${c}`);
+
       return [r,c];
     }
   
   // Si no hay carreteras (improbable)
-  console.log(`❌ No se encontraron carreteras, usando posición original`);
+
   return [row, col];
 };
 
@@ -774,7 +763,7 @@ const neighbors = (row, col, grid) => {
 };
 
 export const findPath = (grid, start, goal) => {
-  console.log(`🔍 findPath: buscando ruta de [${start[0]}, ${start[1]}] a [${goal[0]}, ${goal[1]}]`);
+
   
   // Validar parámetros de entrada
   if (!start || !goal || !Array.isArray(start) || !Array.isArray(goal)) {
@@ -799,7 +788,7 @@ export const findPath = (grid, start, goal) => {
       const path=[u]; let k=key(u);
       while(prev.has(k)){ const p=prev.get(k); path.push(p); k=key(p); }
       const finalPath = path.reverse();
-      console.log(`✅ findPath: ruta encontrada con ${finalPath.length} pasos:`, finalPath);
+
       return finalPath;
     }
     for(const v of neighbors(u[0],u[1],grid)){
@@ -819,12 +808,12 @@ const showBuildingModal = async (buildingType, buildingName) => {
     avatar.style.display = 'none';
     avatar.style.visibility = 'hidden';
     avatar.style.opacity = '0';
-    console.log('✅ Avatar del pueblo ocultado en modal');
+
   }
   
   // Si es ajustes (tipo 16), abrir modal de ajustes directamente
   if (buildingType === 16) {
-    console.log('⚙️ Abriendo modal de ajustes...');
+
     import('./ui.js').then(module => {
       if (module.showSettingsModal) {
         module.showSettingsModal();
@@ -843,7 +832,7 @@ const showBuildingModal = async (buildingType, buildingName) => {
       const { getBest } = await import('./storage.js');
       record = await getBest(info.recordKey) || 1;
     } catch (error) {
-      console.log('Error obteniendo nivel:', error);
+
     }
   }
   
@@ -866,9 +855,9 @@ const showBuildingModal = async (buildingType, buildingName) => {
         setTimeout(() => resolve(1), 1000);
       });
       record = levelData;
-      console.log(`🎮 Nivel obtenido desde GameBridge para ${info.type}:`, record);
+
     } catch (error) {
-      console.log('Error obteniendo nivel desde GameBridge:', error);
+
     }
   }
 
@@ -913,14 +902,13 @@ const showBuildingModal = async (buildingType, buildingName) => {
       avatar.style.opacity = '0';
       avatar.style.pointerEvents = 'none';
       avatar.style.zIndex = '-1';
-      console.log('✅ Avatar del pueblo ocultado en modal (después de mostrar)');
     }
   }, 50);
 
   document.getElementById('modal-play-btn')?.addEventListener('click', (event) => {
     // Obtener la ruta ANTES de cerrar el modal
     const gameRoute = event.target.getAttribute('data-game-route') || 'skate.html';
-    console.log(`🎮 Navegando a: ${gameRoute}`);
+
     
     try { hideModal(); } catch(e) {
       const mr=document.getElementById('modal-root'); if(mr) mr.remove();
@@ -932,7 +920,7 @@ const showBuildingModal = async (buildingType, buildingName) => {
       try {
         window.GameBridge.onGamePlayed();
       } catch(e) {
-        console.log('Error en GameBridge.onGamePlayed:', e);
+
       }
     }
     
@@ -950,7 +938,7 @@ const showBuildingModal = async (buildingType, buildingName) => {
 // ====== CARGAR JUEGOS COMO MÓDULOS ======
 const loadGameModule = async (gameType) => {
   try {
-    console.log(`🎮 Cargando juego: ${gameType}`);
+
     
     // Importar dinámicamente el módulo del juego
     const gameModule = await import(`./${gameType}.js`);
@@ -964,7 +952,7 @@ const loadGameModule = async (gameType) => {
     } else if (gameModule.default) {
       gameModule.default();
     } else {
-      console.log(`⚠️ Módulo ${gameType} cargado pero sin función de inicialización`);
+
     }
     
   } catch (error) {
@@ -1099,13 +1087,13 @@ const getYayosRanking = async () => {
     if (window.GameBridge && window.GameBridge.getYayosRanking) {
       return new Promise((resolve) => {
         window.onYayosRankingReceived = (ranking) => {
-          console.log('📊 Ranking de Yayos recibido:', ranking);
+
           resolve(ranking || []);
         };
         
         // Timeout después de 5 segundos
         setTimeout(() => {
-          console.log('⏰ Timeout obteniendo ranking de Yayos');
+
           resolve([]);
         }, 5000);
         
@@ -1128,13 +1116,13 @@ const getSkateRanking = async () => {
     if (window.GameBridge && window.GameBridge.getSkateRanking) {
       return new Promise((resolve) => {
         window.onSkateRankingReceived = (ranking) => {
-          console.log('📊 Ranking de Skate recibido:', ranking);
+
           resolve(ranking || []);
         };
         
         // Timeout después de 5 segundos
         setTimeout(() => {
-          console.log('⏰ Timeout obteniendo ranking de Skate');
+
           resolve([]);
         }, 5000);
         
@@ -1157,13 +1145,13 @@ const getColeRanking = async () => {
     if (window.GameBridge && window.GameBridge.getColeRanking) {
       return new Promise((resolve) => {
         window.onColeRankingReceived = (ranking) => {
-          console.log('📊 Ranking de Cole recibido:', ranking);
+
           resolve(ranking || []);
         };
         
         // Timeout después de 5 segundos
         setTimeout(() => {
-          console.log('⏰ Timeout obteniendo ranking de Cole');
+
           resolve([]);
         }, 5000);
         
@@ -1184,13 +1172,13 @@ const getInformaticaRanking = async () => {
     if (window.GameBridge && window.GameBridge.getInformaticaRanking) {
       return new Promise((resolve) => {
         window.onInformaticaRankingReceived = (ranking) => {
-          console.log('📊 Ranking de Informática recibido:', ranking);
+
           resolve(ranking || []);
         };
         
         // Timeout después de 5 segundos
         setTimeout(() => {
-          console.log('⏰ Timeout obteniendo ranking de Informática');
+
           resolve([]);
         }, 5000);
         
@@ -1211,12 +1199,12 @@ const getEdificioRanking = async () => {
     if (window.GameBridge && window.GameBridge.getEdificioRanking) {
       return new Promise((resolve) => {
         window.onEdificioRankingReceived = (ranking) => {
-          console.log('📊 Ranking de Edificio recibido:', ranking);
+
           resolve(ranking || []);
         };
         
         setTimeout(() => {
-          console.log('⏰ Timeout obteniendo ranking de Edificio');
+
           resolve([]);
         }, 5000);
         
@@ -1237,12 +1225,12 @@ const getRioRanking = async () => {
     if (window.GameBridge && window.GameBridge.getRioRanking) {
       return new Promise((resolve) => {
         window.onRioRankingReceived = (ranking) => {
-          console.log('📊 Ranking de Río recibido:', ranking);
+
           resolve(ranking || []);
         };
         
         setTimeout(() => {
-          console.log('⏰ Timeout obteniendo ranking de Río');
+
           resolve([]);
         }, 5000);
         
@@ -1263,12 +1251,12 @@ const getParqueRanking = async () => {
     if (window.GameBridge && window.GameBridge.getParqueRanking) {
       return new Promise((resolve) => {
         window.onParqueRankingReceived = (ranking) => {
-          console.log('📊 Ranking de Parque recibido:', ranking);
+
           resolve(ranking || []);
         };
         
         setTimeout(() => {
-          console.log('⏰ Timeout obteniendo ranking de Parque');
+
           resolve([]);
         }, 5000);
         
@@ -1289,12 +1277,12 @@ const getTiendaRanking = async () => {
     if (window.GameBridge && window.GameBridge.getTiendaRanking) {
       return new Promise((resolve) => {
         window.onTiendaRankingReceived = (ranking) => {
-          console.log('📊 Ranking de Tienda recibido:', ranking);
+
           resolve(ranking || []);
         };
         
         setTimeout(() => {
-          console.log('⏰ Timeout obteniendo ranking de Tienda');
+
           resolve([]);
         }, 5000);
         
@@ -1315,12 +1303,12 @@ const getPabellonRanking = async () => {
     if (window.GameBridge && window.GameBridge.getPabellonRanking) {
       return new Promise((resolve) => {
         window.onPabellonRankingReceived = (ranking) => {
-          console.log('📊 Ranking de Pabellón recibido:', ranking);
+
           resolve(ranking || []);
         };
         
         setTimeout(() => {
-          console.log('⏰ Timeout obteniendo ranking de Pabellón');
+
           resolve([]);
         }, 5000);
         
@@ -1492,7 +1480,7 @@ const getBuildingInfoByType = (type) => {
 
 // Función auxiliar para cargar el ranking
 const loadRankingList = async () => {
-  console.log('loadRankingList iniciado');
+
   const rankingDiv = document.getElementById('ranking-list');
   if (!rankingDiv) {
     console.error('No se encontró ranking-list div');
@@ -1502,7 +1490,7 @@ const loadRankingList = async () => {
   rankingDiv.innerHTML = '<p style="text-align:center; color:#888;">Cargando...</p>';
   
   const result = await getRankingGlobal();
-  console.log('Resultado ranking:', result);
+
   
   if (!result.ok || !result.ranking || result.ranking.length === 0) {
     rankingDiv.innerHTML = '<p style="text-align:center; color:#888;">No hay datos de ranking aún. <a href="#" onclick="window.location.href=\'/sistema_apps_upload/pueblito/crear_datos_prueba.php\'; return false;" style="color:#667eea;">Crear datos de prueba</a></p>';

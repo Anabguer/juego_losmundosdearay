@@ -36,16 +36,13 @@ public class MainActivity extends AppCompatActivity {
         setupWebView();
 
         // Configurar AdMob
-        Log.d("MainActivity", "Configurando AdMob...");
         adManager = new AdManager(this);
         adManager.setWebView(webView); // Pasar WebView para pausar/reanudar juegos
         
         // Configurar el AdView
         AdView adView = findViewById(R.id.adView);
-        Log.d("MainActivity", "AdView encontrado: " + (adView != null ? "SÍ" : "NO"));
         if (adView != null) {
-            adView.setVisibility(View.VISIBLE); // Asegurar que esté visible
-            Log.d("MainActivity", "AdView visibility: " + adView.getVisibility());
+            adView.setVisibility(View.VISIBLE);
             
             // Forzar que sea visible y tenga tamaño estándar de banner (320x50dp)
             android.view.ViewGroup.LayoutParams params = adView.getLayoutParams();
@@ -54,7 +51,6 @@ public class MainActivity extends AppCompatActivity {
                 params.width = (int) (320 * density);
                 params.height = (int) (50 * density);
                 adView.setLayoutParams(params);
-                Log.d("MainActivity", "Tamaño del banner establecido: " + params.width + "x" + params.height);
             }
             adView.requestLayout();
         }
@@ -63,11 +59,6 @@ public class MainActivity extends AppCompatActivity {
         gameBridge = new GameBridge(this, adManager);
         webView.addJavascriptInterface(gameBridge, "GameBridge");
         webView.addJavascriptInterface(this, "MainActivity");
-        
-        Log.d("MainActivity", "GameBridge configurado y añadido a WebView");
-        Log.d("MainActivity", "MainActivity también añadido como bridge");
-        Log.d("MainActivity", "GameBridge instance: " + gameBridge);
-        Log.d("MainActivity", "WebView instance: " + webView);
     }
 
     private void setupImmersiveMode() {
@@ -85,8 +76,6 @@ public class MainActivity extends AppCompatActivity {
         
         // Mantener la pantalla encendida
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        
-        Log.d("MainActivity", "Modo inmersivo configurado");
     }
 
     @Override
@@ -98,7 +87,6 @@ public class MainActivity extends AppCompatActivity {
                 "if (window.stopBackgroundMusic) window.stopBackgroundMusic();",
                 null
             );
-            Log.d("MainActivity", "Música pausada en onPause");
         }
     }
 
@@ -119,7 +107,6 @@ public class MainActivity extends AppCompatActivity {
                 "})();",
                 null
             );
-            Log.d("MainActivity", "Verificando si debe reanudar música en onResume");
         }
     }
 
@@ -136,22 +123,9 @@ public class MainActivity extends AppCompatActivity {
                 if (adView != null) {
                     android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
                     handler.postDelayed(() -> {
-                        Log.d("MainActivity", "═══════════════════════════════════════");
-                        Log.d("MainActivity", "🔄 onWindowFocusChanged - Cargando banner...");
-                        Log.d("MainActivity", "AdView encontrado: " + (adView != null ? "SÍ" : "NO"));
-                        if (adView != null) {
-                            Log.d("MainActivity", "AdView width: " + adView.getWidth() + ", height: " + adView.getHeight());
-                            Log.d("MainActivity", "AdView visibility: " + adView.getVisibility());
-                            Log.d("MainActivity", "AdView isAttachedToWindow: " + adView.isAttachedToWindow());
-                        }
-                        Log.d("MainActivity", "═══════════════════════════════════════");
                         adManager.setupBannerAd(adView);
                     }, 500);
-                } else {
-                    Log.e("MainActivity", "❌ AdView es null en onWindowFocusChanged!");
                 }
-            } else {
-                Log.e("MainActivity", "❌ AdManager es null en onWindowFocusChanged!");
             }
         }
     }
@@ -189,12 +163,6 @@ public class MainActivity extends AppCompatActivity {
                     injectUserData();
                 }
                 
-                // Inyectar código para mostrar logs en consola del navegador
-                webView.evaluateJavascript(
-                    "console.log('🔵 [Android] Página cargada: ' + window.location.href); " +
-                    "console.log('🔵 [Android] Banner debería estar visible en la parte inferior');",
-                    null
-                );
             }
         });
 
@@ -204,16 +172,6 @@ public class MainActivity extends AppCompatActivity {
         // El banner se cargará desde onWindowFocusChanged cuando la actividad esté completamente visible
     }
 
-    // Método para enviar logs a la consola del navegador
-    public void logToConsole(String message) {
-        if (webView != null) {
-            webView.evaluateJavascript(
-                "console.log('[Android] " + message.replace("'", "\\'") + "');",
-                null
-            );
-        }
-    }
-    
     private void injectViewportFix() {
         String css =
                 "body { margin: 0 !important; padding: 0 !important; padding-bottom: 50px !important; overflow: hidden !important; } " +
@@ -273,24 +231,15 @@ public class MainActivity extends AppCompatActivity {
     public void showRanking() {
         // Verificar si hay sesión
         boolean isLoggedIn = gameBridge.isUserLoggedIn();
-        Log.d("MainActivity", "showRanking() - isLoggedIn: " + isLoggedIn);
         
         if (isLoggedIn) {
             // Usuario logueado - mostrar ranking directamente
-            Log.d("MainActivity", "Usuario logueado, abriendo RankingActivity...");
             Intent intent = new Intent(this, RankingActivity.class);
             startActivity(intent);
         } else {
             // Usuario no logueado - iniciar flujo de login
-            Log.d("MainActivity", "Usuario no logueado, abriendo LoginActivity...");
             Intent intent = new Intent(this, LoginActivity.class);
             startActivityForResult(intent, 1001);
         }
-    }
-
-    // Método de prueba para verificar el bridge
-    @JavascriptInterface
-    public void testBridge() {
-        Log.e("MainActivity", "🧪🧪🧪 testBridge() LLAMADO desde JavaScript 🧪🧪🧪");
     }
 }

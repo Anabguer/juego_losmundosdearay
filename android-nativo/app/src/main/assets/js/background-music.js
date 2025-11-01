@@ -15,7 +15,7 @@ const stopAllMusic = () => {
       window._backgroundMusicInstance.pause();
       // NO resetear currentTime aquí - mantener la posición
     } catch (e) {
-      console.log('Error deteniendo música anterior:', e);
+      // Error silencioso
     }
   }
   if (backgroundMusic) {
@@ -23,7 +23,7 @@ const stopAllMusic = () => {
       backgroundMusic.pause();
       // NO resetear currentTime aquí - mantener la posición
     } catch (e) {
-      console.log('Error deteniendo música local:', e);
+      // Error silencioso
     }
   }
   isMusicPlaying = false;
@@ -53,7 +53,7 @@ const initBackgroundMusic = () => {
   
   // Manejar errores de carga
   backgroundMusic.addEventListener('error', (e) => {
-    console.log('No se pudo cargar la música de fondo:', e);
+    // Error silencioso
   });
 };
 
@@ -66,15 +66,12 @@ const playBackgroundMusic = () => {
     if (savedMusic !== null) {
       musicEnabled = savedMusic === 'true';
       window.musicEnabled = musicEnabled;
-      console.log('🎵 Usando preferencia de localStorage:', musicEnabled);
     } else {
-      console.log('🔇 Preferencias de música no cargadas aún, no reproduciendo');
       return;
     }
   }
   
   if (!musicEnabled) {
-    console.log('🔇 Música deshabilitada por preferencias del usuario');
     return;
   }
   
@@ -85,7 +82,6 @@ const playBackgroundMusic = () => {
   
   // Verificar si ya está reproduciéndose (usando la instancia global)
   if (window._backgroundMusicInstance && !window._backgroundMusicInstance.paused) {
-    console.log('🎵 Música ya está reproduciéndose');
     isMusicPlaying = true;
     return;
   }
@@ -97,11 +93,9 @@ const playBackgroundMusic = () => {
     musicToPlay.play()
       .then(() => {
         isMusicPlaying = true;
-        console.log('🎵 Música de fondo iniciada');
       })
       .catch(e => {
-        // Error común: requiere interacción del usuario en algunos navegadores
-        console.log('⚠️ No se pudo reproducir la música (puede requerir interacción):', e.message);
+        // Error silencioso - puede requerir interacción del usuario en algunos navegadores
       });
   }
 };
@@ -118,13 +112,11 @@ const pauseBackgroundMusic = () => {
     backgroundMusic.pause();
   }
   isMusicPlaying = false;
-  console.log('🔇 Música de fondo pausada (posición guardada)');
 };
 
 // Función para detener música completamente
 const stopBackgroundMusic = () => {
   stopAllMusic();
-  console.log('⏹️ Música de fondo detenida');
 };
 
 // Función para verificar si estamos en un juego
@@ -149,7 +141,6 @@ const isInGame = () => {
 
 // Función para manejar el cambio de página
 const handlePageChange = () => {
-  console.log('🔄 handlePageChange - Página:', window.location.href, 'isInGame:', isInGame());
   // La música debe reproducirse en TODAS las páginas si está habilitada
   // Solo depende de la preferencia del usuario, no de la página
   const savedMusic = localStorage.getItem('musicEnabled');
@@ -168,8 +159,6 @@ const handlePageChange = () => {
 
 // Inicializar cuando se carga la página
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('🎵 DOMContentLoaded - Página:', window.location.href);
-  
   // Inicializar música (sin detener, para mantener continuidad)
   initBackgroundMusic();
   
@@ -244,3 +233,4 @@ window.stopBackgroundMusic = stopBackgroundMusic;
 window.enableMusic = enableMusic;
 window.isInGame = isInGame;
 window.handlePageChange = handlePageChange;
+window.initBackgroundMusic = initBackgroundMusic;

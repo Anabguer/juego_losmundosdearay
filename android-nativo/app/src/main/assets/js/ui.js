@@ -65,7 +65,6 @@ export function showModal(title, contentNode, addToStack = true) {
       const currentContent = currentModal.querySelector('.modal-content')?.cloneNode(true);
       if (currentContent) {
         modalStack.push({ title: currentTitle, content: currentContent });
-        console.log('📚 Modal guardado en stack:', currentTitle);
       }
     }
   }
@@ -127,16 +126,13 @@ let modalStack = [];
 
 // Función para restaurar event listeners específicos del modal
 function restoreModalEventListeners(modalTitle) {
-  console.log('🔄 Restaurando event listeners para:', modalTitle);
   
   // Si es un modal de juego (contiene botón modal-play-btn)
   const playBtn = document.getElementById('modal-play-btn');
   if (playBtn) {
-    console.log('🎮 Restaurando botón JUGAR AHORA');
     playBtn.addEventListener('click', (event) => {
       // Obtener la ruta ANTES de cerrar el modal
       const gameRoute = event.target.getAttribute('data-game-route') || 'skate.html';
-      console.log(`🎮 Navegando a: ${gameRoute}`);
       
       try { hideModal(); } catch(e) {
         const mr=document.getElementById('modal-root'); if(mr) mr.remove();
@@ -148,7 +144,7 @@ function restoreModalEventListeners(modalTitle) {
         try {
           window.GameBridge.onGamePlayed();
         } catch(e) {
-          console.log('Error en GameBridge.onGamePlayed:', e);
+          // Error silencioso
         }
       }
       
@@ -160,7 +156,6 @@ function restoreModalEventListeners(modalTitle) {
   // Si es un modal de ranking (contiene botón btn-ranking-modal)
   const rankingBtn = document.getElementById('btn-ranking-modal');
   if (rankingBtn) {
-    console.log('🏆 Restaurando botón RANKING');
     rankingBtn.addEventListener('click', async () => {
       playSound('click');
       // Obtener información del juego desde el botón
@@ -179,7 +174,6 @@ function restoreModalEventListeners(modalTitle) {
   // Si es un modal de ranking específico (contiene botón btn-close-game-ranking)
   const closeRankingBtn = document.getElementById('btn-close-game-ranking');
   if (closeRankingBtn) {
-    console.log('❌ Restaurando botón CERRAR ranking');
     closeRankingBtn.addEventListener('click', () => {
       hideModal();
     });
@@ -194,7 +188,6 @@ export function hideModal() {
   // Si hay modales en el stack, mostrar el anterior
   if (modalStack.length > 0) {
     const previousModal = modalStack.pop();
-    console.log('📚 Restaurando modal desde stack:', previousModal.title);
     
     // Crear el modal anterior directamente sin usar showModal para evitar recursión
     const newRoot = document.createElement('div');
@@ -250,7 +243,6 @@ export function hideModal() {
     avatar.style.display = 'block';
     avatar.style.visibility = 'visible';
     avatar.style.opacity = '1';
-    console.log('✅ Avatar del pueblo restaurado al cerrar modal');
     
     // Actualizar posición del avatar después de restaurarlo
     setTimeout(() => {
@@ -258,7 +250,6 @@ export function hideModal() {
       import('./map.js').then(module => {
         if (module.updateAvatarPosition) {
           module.updateAvatarPosition();
-          console.log('🔄 Posición del avatar actualizada al cerrar modal');
         }
       }).catch(() => {
         // Si no se puede importar, intentar llamar a la función global
@@ -382,11 +373,10 @@ export const updateHUD = () => {
                 userNick = userData.nick;
                 // Guardar en localStorage para futuras referencias
                 localStorage.setItem('user_nick', userNick);
-                console.log('👤 Nick obtenido desde GameBridge:', userNick);
               }
             }
           } catch (error) {
-            console.log('Error obteniendo nick del usuario desde GameBridge:', error);
+            // Error silencioso
           }
         }
     
@@ -399,18 +389,15 @@ export const updateHUD = () => {
     if (userNick) {
       userNickEl.textContent = userNick;
       userNickEl.style.display = 'block';
-      console.log('👤 Nick mostrado:', userNick);
     } else {
       // Verificar si el usuario está logueado
       const isLoggedIn = window.GameBridge && window.GameBridge.isUserLoggedIn ? window.GameBridge.isUserLoggedIn() : false;
       if (isLoggedIn) {
         userNickEl.textContent = 'Usuario';
         userNickEl.style.display = 'block';
-        console.log('👤 Usuario logueado sin nick - mostrando "Usuario"');
       } else {
         userNickEl.textContent = 'Invitado';
         userNickEl.style.display = 'block';
-        console.log('👤 Usuario no logueado - mostrando "Invitado"');
       }
     }
   }
@@ -421,10 +408,6 @@ export const updateHUD = () => {
     if (!window.lastCandiesUpdate || (now - window.lastCandiesUpdate > 2000)) {
       window.cachedCandies = getCandies();
       window.lastCandiesUpdate = now;
-      // Solo loggear ocasionalmente para evitar spam
-      if (Math.random() < 0.1) { // 10% de probabilidad
-        console.log('🎨 updateHUD() - caramelos obtenidos:', window.cachedCandies);
-      }
     }
     const formatted = formatNumber(window.cachedCandies || 0);
     if (coinsEl) coinsEl.textContent = formatted;
@@ -503,7 +486,7 @@ export const playAudioFile = (path, volume = 0.5) => {
     audio.play().catch(e => {
       // Solo loggear errores reales, no cuando simplemente está desactivado
       if (window.audioEnabled) {
-        console.log('Audio no disponible:', path, e);
+        // Audio no disponible
       }
     });
   } catch (e) {
@@ -513,7 +496,6 @@ export const playAudioFile = (path, volume = 0.5) => {
 
 export const playSound = (type = 'click') => {
   if (window.audioEnabled === null || window.audioEnabled === undefined) {
-    console.log('🔇 Preferencias de audio no cargadas aún, no reproduciendo:', type);
     return;
   }
   
@@ -589,7 +571,6 @@ export const initBackgroundMusic = () => {
   // Usar la instancia global compartida de background-music.js si existe
   if (window._backgroundMusicInstance) {
     backgroundMusic = window._backgroundMusicInstance;
-    console.log('🎵 Usando instancia global compartida de backgroundMusic');
     return;
   }
   
@@ -601,69 +582,62 @@ export const initBackgroundMusic = () => {
     backgroundMusic.preload = 'auto';
     
     // NO reproducir automáticamente - esperar a que se carguen las preferencias
-    console.log('🎵 BackgroundMusic inicializado en ui.js, esperando preferencias...');
   }
 };
 
 // Función eliminada - usar directamente window.playBackgroundMusic de background-music.js
 // export const playBackgroundMusic = () => { ... } // ELIMINADO - causa recursión infinita
 
-export const stopBackgroundMusic = () => {
-  console.log('🔇 stopBackgroundMusic() llamado');
-  
-  // Usar la función global de background-music.js si existe para evitar duplicados
-  if (window.stopBackgroundMusic && window._backgroundMusicInstance) {
-    console.log('🔇 Usando stopBackgroundMusic de background-music.js');
-    window.stopBackgroundMusic();
-    return;
-  }
-  
-  // Usar la instancia global compartida si existe
-  if (window._backgroundMusicInstance) {
-    backgroundMusic = window._backgroundMusicInstance;
-  } else if (!backgroundMusic) {
-    console.log('🔇 backgroundMusic no está inicializado, inicializando...');
-    initBackgroundMusic();
-  }
-  
-  if (backgroundMusic) {
-    console.log('🔇 Deteniendo música de fondo...');
-    // Guardar el tiempo actual para poder reanudar desde ahí si se pausa (no resetear a 0)
-    if (!window._musicPausedAt && !backgroundMusic.paused) {
-      window._musicPausedAt = backgroundMusic.currentTime;
-    }
-    backgroundMusic.pause();
-    console.log('🔇 Música de fondo pausada');
-  } else {
-    console.log('❌ No se pudo inicializar backgroundMusic');
-  }
-};
+// Función eliminada - usar directamente window.stopBackgroundMusic de background-music.js
+// export const stopBackgroundMusic = () => { ... } // ELIMINADO - causa recursión infinita
 
 export const setMusicEnabled = (enabled) => {
-  console.log('🎵 setMusicEnabled() llamado con:', enabled);
-  
   // Actualizar variables globales inmediatamente
   window.musicEnabled = enabled;
   
-  console.log('🎵 Variables actualizadas - musicEnabled:', window.musicEnabled);
+  // Actualizar localStorage inmediatamente para que las funciones lo vean
+  localStorage.setItem('musicEnabled', enabled.toString());
   
-  // Guardar usando la función adaptada de MemoFlip
-  saveAudioSettings(window.audioEnabled, enabled);
-  
-  // Aplicar cambios de música inmediatamente
+  // Aplicar cambios de música INMEDIATAMENTE antes de guardar en Firebase
   if (enabled) {
-    console.log('🎵 Activando música de fondo...');
-    if (window.playBackgroundMusic) {
+    // Inicializar música si no existe
+    if (!window._backgroundMusicInstance) {
+      if (window.initBackgroundMusic) {
+        // Si hay una función global de inicialización, usarla
+        const initFunc = typeof window.initBackgroundMusic === 'function' ? window.initBackgroundMusic : null;
+        if (initFunc) initFunc();
+      }
+    }
+    // Forzar reproducción
+    const musicInstance = window._backgroundMusicInstance;
+    if (musicInstance) {
+      if (musicInstance.paused) {
+        // Si había una posición guardada, restaurarla
+        if (window._musicPausedAt !== undefined) {
+          musicInstance.currentTime = window._musicPausedAt;
+          delete window._musicPausedAt;
+        }
+        musicInstance.play().catch(e => {
+          // Error silencioso
+        });
+      }
+    } else if (window.playBackgroundMusic) {
+      // Si no hay instancia, usar la función global
       window.playBackgroundMusic();
     }
   } else {
-    console.log('🔇 Desactivando música de fondo...');
-    if (window.stopBackgroundMusic) {
+    // Pausar música inmediatamente
+    const musicInstance = window._backgroundMusicInstance;
+    if (musicInstance && !musicInstance.paused) {
+      window._musicPausedAt = musicInstance.currentTime;
+      musicInstance.pause();
+    } else if (window.stopBackgroundMusic) {
       window.stopBackgroundMusic();
     }
   }
   
-  console.log('🎵 Música de fondo:', enabled ? 'Activada' : 'Desactivada');
+  // Guardar en Firebase después de aplicar el cambio
+  saveAudioSettings(window.audioEnabled, enabled);
 };
 
 // ========== VIBRACIÓN ==========
@@ -808,47 +782,34 @@ export const showSettingsModal = () => {
   
   // Función para actualizar el botón de autenticación
   const updateAuthButton = () => {
-    console.log('🔧 updateAuthButton() llamado');
     const authButton = document.getElementById('btn-auth');
     if (!authButton) {
-      console.log('❌ Botón btn-auth no encontrado');
       return;
     }
     
-    console.log('🔧 Verificando estado de login...');
-    console.log('🔧 GameBridge disponible:', !!window.GameBridge);
-    console.log('🔧 isUserLoggedIn disponible:', !!(window.GameBridge && window.GameBridge.isUserLoggedIn));
-    
     // Verificar si el usuario está logueado
     const isLoggedIn = window.GameBridge && window.GameBridge.isUserLoggedIn ? window.GameBridge.isUserLoggedIn() : false;
-    console.log('🔧 isLoggedIn:', isLoggedIn);
     
     if (isLoggedIn) {
-      console.log('🔧 Usuario logueado - configurando botón de cerrar sesión');
       // Usuario logueado - mostrar botón de cerrar sesión
       const userData = window.GameBridge && window.GameBridge.getUser ? window.GameBridge.getUser() : null;
-      console.log('🔧 userData:', userData);
       let nick = 'Usuario';
       
       if (userData) {
         try {
           const user = JSON.parse(userData);
           nick = user.nick || 'Usuario';
-          console.log('🔧 Nick extraído:', nick);
         } catch (e) {
-          console.log('❌ Error parsing user data:', e);
+          // Error silencioso
         }
       }
       
       authButton.innerHTML = `🚪 Cerrar Sesión - ${nick}`;
       authButton.style.background = 'linear-gradient(135deg, #ff6b6b, #ff4757)';
-      console.log('✅ Botón configurado para cerrar sesión');
     } else {
-      console.log('🔧 Usuario NO logueado - configurando botón de iniciar sesión');
       // Usuario no logueado - mostrar botón de iniciar sesión
       authButton.innerHTML = '🔑 Entrar con Google';
       authButton.style.background = 'linear-gradient(135deg, #4285f4, #34a853)';
-      console.log('✅ Botón configurado para iniciar sesión');
     }
   };
   
@@ -856,23 +817,16 @@ export const showSettingsModal = () => {
   updateAuthButton();
   
   document.getElementById('btn-auth').addEventListener('click', () => {
-    console.log('🔧🔧🔧 btn-auth click detectado 🔧🔧🔧');
     const isLoggedIn = window.GameBridge && window.GameBridge.isUserLoggedIn ? window.GameBridge.isUserLoggedIn() : false;
-    console.log('🔧 Estado de login al hacer click:', isLoggedIn);
     
     if (isLoggedIn) {
-      console.log('🔧 Ejecutando signOut()...');
       // Cerrar sesión
       if (window.GameBridge && window.GameBridge.signOut) {
-        console.log('🔧 Llamando a window.GameBridge.signOut()');
         window.GameBridge.signOut();
         // Actualizar el botón después de cerrar sesión
         setTimeout(updateAuthButton, 500);
-      } else {
-        console.log('🔧 ERROR: window.GameBridge.signOut no disponible');
       }
     } else {
-      console.log('🔧 Ejecutando signInWithGoogle()...');
       // Iniciar sesión
       if (window.GameBridge && window.GameBridge.signInWithGoogle) {
         window.GameBridge.signInWithGoogle();
@@ -953,12 +907,22 @@ export const initCommonUI = () => {
   window.playAudioFile = playAudioFile; // Exponer globalmente para levelup.js y otros
   // NO reexportar playBackgroundMusic aquí - ya está definido en background-music.js
 // window.playBackgroundMusic = playBackgroundMusic; // ELIMINADO - causa recursión infinita
-  window.stopBackgroundMusic = stopBackgroundMusic;
+  // NO exportar stopBackgroundMusic aquí - ya está en background-music.js
   window.setMusicEnabled = setMusicEnabled;
   
   // Callback para cuando Firebase actualiza las preferencias de audio
   window.onAudioPreferencesUpdated = (soundEnabled, musicEnabled) => {
-    console.log('🔄 onAudioPreferencesUpdated() llamado desde Java - sonido:', soundEnabled, 'música:', musicEnabled);
+    
+    // Solo actualizar si los valores son diferentes a los actuales (evitar loops)
+    const currentMusicEnabled = window.musicEnabled !== null && window.musicEnabled !== undefined 
+      ? window.musicEnabled 
+      : (localStorage.getItem('musicEnabled') === 'true');
+    
+    if (currentMusicEnabled === musicEnabled) {
+      // Solo actualizar toggles para sincronizar UI
+      updateAudioToggles();
+      return;
+    }
     
     // Actualizar variables globales
     window.audioEnabled = soundEnabled;
@@ -968,17 +932,35 @@ export const initCommonUI = () => {
     localStorage.setItem('audioEnabled', soundEnabled.toString());
     localStorage.setItem('musicEnabled', musicEnabled.toString());
     
-    console.log('🔄 Variables globales actualizadas - audioEnabled:', window.audioEnabled, 'musicEnabled:', window.musicEnabled);
     
     // Aplicar cambios de música inmediatamente - se reproduce en TODAS las páginas si está habilitada
     if (musicEnabled) {
-      console.log('🎵 Activando música de fondo desde callback...');
-      if (window.playBackgroundMusic) {
+      // Inicializar música si no existe
+      if (!window._backgroundMusicInstance) {
+        if (typeof window.initBackgroundMusic === 'function') {
+          window.initBackgroundMusic();
+        }
+      }
+      // Forzar reproducción
+      const musicInstance = window._backgroundMusicInstance;
+      if (musicInstance) {
+        if (musicInstance.paused) {
+          if (window._musicPausedAt !== undefined) {
+            musicInstance.currentTime = window._musicPausedAt;
+            delete window._musicPausedAt;
+          }
+          musicInstance.play().catch(e => console.log('⚠️ Error reproduciendo:', e.message));
+        }
+      } else if (window.playBackgroundMusic) {
         window.playBackgroundMusic();
       }
     } else {
-      console.log('🔇 Desactivando música de fondo desde callback...');
-      if (window.stopBackgroundMusic) {
+      // Pausar música inmediatamente
+      const musicInstance = window._backgroundMusicInstance;
+      if (musicInstance && !musicInstance.paused) {
+        window._musicPausedAt = musicInstance.currentTime;
+        musicInstance.pause();
+      } else if (window.stopBackgroundMusic) {
         window.stopBackgroundMusic();
       }
     }
@@ -998,7 +980,6 @@ export const initCommonUI = () => {
           if (userData.nick && userData.nick !== "Usuario" &&
               typeof userData.soundEnabled === 'boolean' &&
               typeof userData.musicEnabled === 'boolean') {
-            console.log('🔊 Firebase listo -> aplicando preferencias');
             clearInterval(checkInterval);
             loadAudioPreferences({ force: true }).then(() => {
               initBackgroundMusic();
@@ -1006,14 +987,13 @@ export const initCommonUI = () => {
           }
         }
       } catch (err) {
-        console.log('🔊 Error verificando datos de Firebase:', err);
+        // Error silencioso
       }
     }, 500);
 
     // Timeout de seguridad: caer a localStorage (sin forzar falsos)
     setTimeout(() => {
       clearInterval(checkInterval);
-      console.log('⚠️ Timeout esperando Firebase -> localStorage si existe');
       loadAudioPreferences({ force: true }).then(() => {
         initBackgroundMusic();
       });
@@ -1031,12 +1011,6 @@ export const refreshAudioFromBridge = () => {
     if (!dataStr || dataStr === '{}') return false;
 
     const user = JSON.parse(dataStr);
-    console.log('🔊 refreshAudioFromBridge() - datos obtenidos:', {
-      soundEnabled: user.soundEnabled,
-      musicEnabled: user.musicEnabled,
-      hasSoundEnabled: typeof user.soundEnabled === 'boolean',
-      hasMusicEnabled: typeof user.musicEnabled === 'boolean'
-    });
     
     if (typeof user.soundEnabled === 'boolean' && typeof user.musicEnabled === 'boolean') {
       window.audioEnabled = user.soundEnabled;
@@ -1046,7 +1020,6 @@ export const refreshAudioFromBridge = () => {
       localStorage.setItem('audioEnabled', String(window.audioEnabled));
       localStorage.setItem('musicEnabled', String(window.musicEnabled));
 
-      console.log('✅ Preferencias de audio cargadas desde Firebase - sonido:', window.audioEnabled, 'música:', window.musicEnabled);
 
       // refleja en UI si procede
       if (typeof updateAudioToggles === 'function') updateAudioToggles();
@@ -1066,7 +1039,7 @@ export const refreshAudioFromBridge = () => {
     }
     return false;
   } catch (e) {
-    console.log('❌ refreshAudioFromBridge error:', e);
+    // Error silencioso
     return false;
   }
 };
@@ -1094,18 +1067,14 @@ const saveAudioSettings = (soundEnabled, musicEnabled) => {
 };
 
 const loadAudioPreferences = ({ force = false } = {}) => {
-  console.log('🔊 Cargando preferencias de audio...', { force });
-
   // Permite recarga si force=true
   if (audioPreferencesLoaded && !force) {
-    console.log('🔊 Preferencias ya cargadas, saltando carga');
     return Promise.resolve();
   }
   
   return new Promise((resolve) => {
     // ---- RUTA ANDROID / LOGUEADO ----
     if (window.GameBridge && window.GameBridge.isUserLoggedIn && window.GameBridge.isUserLoggedIn()) {
-      console.log('🔊 Usuario logueado, intentando obtener preferencias desde GameBridge/Firestore...');
 
       // 1) Intento inmediato desde bridge
       const applied = refreshAudioFromBridge();
@@ -1116,7 +1085,6 @@ const loadAudioPreferences = ({ force = false } = {}) => {
 
       // 2) Configurar callback tardío
       window.onAudioPreferencesLoaded = () => {
-        console.log('🔊 onAudioPreferencesLoaded -> sincronizando');
         const ok = refreshAudioFromBridge();
         audioPreferencesLoaded = true; // ahora sí
         window.onAudioPreferencesLoaded = null;
@@ -1126,7 +1094,6 @@ const loadAudioPreferences = ({ force = false } = {}) => {
       // 3) Timeout de seguridad: NO fuerces false; cae a localStorage si existe
       setTimeout(() => {
         if (window.onAudioPreferencesLoaded) {
-          console.log('⚠️ Timeout Firebase; usando localStorage si hay');
           const savedAudio = localStorage.getItem('audioEnabled');
           const savedMusic = localStorage.getItem('musicEnabled');
 
@@ -1146,7 +1113,6 @@ const loadAudioPreferences = ({ force = false } = {}) => {
 
     // ---- RUTA WEB / NO LOGUEADO ----
     } else {
-      console.log('🔊 Usuario no logueado, cargando desde localStorage');
       const savedAudioEnabled = localStorage.getItem('audioEnabled');
       const savedMusicEnabled = localStorage.getItem('musicEnabled');
 
@@ -1174,12 +1140,10 @@ const updateAudioToggles = () => {
   const currentAudioEnabled = window.audioEnabled;
   const currentMusicEnabled = window.musicEnabled;
   
-  console.log('🔧 updateAudioToggles() llamado - audioEnabled:', currentAudioEnabled, 'musicEnabled:', currentMusicEnabled);
   
   // Solo actualizar si los valores no son null
   if (currentAudioEnabled === null || currentAudioEnabled === undefined || 
       currentMusicEnabled === null || currentMusicEnabled === undefined) {
-    console.log('🔧 Valores de audio aún no cargados, saltando actualización de toggles');
     return;
   }
   
@@ -1218,11 +1182,9 @@ const updateAudioToggles = () => {
     
     // Actualizar el estado del toggle
     musicToggle.checked = currentMusicEnabled;
-    console.log('🎵 Toggle de música actualizado a:', currentMusicEnabled);
     
     // Re-agregar el event listener
     musicToggle._changeHandler = (e) => {
-      console.log('🎵 Toggle de música cambiado a:', e.target.checked);
       setMusicEnabled(e.target.checked);
     };
     musicToggle.addEventListener('change', musicToggle._changeHandler);
@@ -1234,7 +1196,6 @@ const updateAudioToggles = () => {
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     // Página oculta (app minimizada)
-    console.log('🔇 Página oculta - pausando música');
     if (backgroundMusic && !backgroundMusic.paused) {
       backgroundMusic.pause();
       // Guardar el tiempo actual para reanudar desde ahí
@@ -1242,7 +1203,6 @@ document.addEventListener('visibilitychange', () => {
     }
   } else {
     // Página visible (app maximizada)
-    console.log('🎵 Página visible - reanudando música si estaba habilitada');
     // Verificar si la música está habilitada (tanto window.musicEnabled como localStorage)
     const musicEnabled = window.musicEnabled !== false && 
                          localStorage.getItem('musicEnabled') !== 'false' &&
@@ -1262,7 +1222,6 @@ document.addEventListener('visibilitychange', () => {
 
 // También manejar eventos de blur/focus como respaldo
 window.addEventListener('blur', () => {
-  console.log('🔇 Ventana perdió foco - pausando música');
   if (backgroundMusic && !backgroundMusic.paused) {
     backgroundMusic.pause();
     window._musicPausedAt = backgroundMusic.currentTime;
@@ -1270,7 +1229,6 @@ window.addEventListener('blur', () => {
 });
 
 window.addEventListener('focus', () => {
-  console.log('🎵 Ventana recuperó foco - reanudando música si estaba habilitada');
   // Verificar si la música está habilitada (tanto window.musicEnabled como localStorage)
   const musicEnabled = window.musicEnabled !== false && 
                        localStorage.getItem('musicEnabled') !== 'false' &&

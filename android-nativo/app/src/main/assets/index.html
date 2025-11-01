@@ -58,41 +58,27 @@
     
     // Inicializar cuando el DOM esté listo
     document.addEventListener('DOMContentLoaded', async () => {
-      console.log('🚀 DOM cargado, iniciando aplicación...');
-      
       try {
         // Inicializar mapa PRIMERO para mostrar la pantalla inmediatamente
         initMap();
-        console.log('✅ initMap() completado');
         
         // Inicializar UI común
         initCommonUI();
-        console.log('✅ initCommonUI() completado');
         
         // Actualizar HUD inicialmente (sin esperar sincronización)
         updateHUD();
-        console.log('✅ updateHUD() completado');
         
         // Inicializar sincronización automática EN PARALELO (no bloqueante)
         // Esto no bloquea la visualización del mapa
         initAutoSync().then(() => {
-          console.log('✅ Sincronización automática inicializada');
           // Actualizar HUD después de sincronizar con los datos más recientes
           updateHUD();
         }).catch((error) => {
-          console.error('❌ Error en sincronización:', error);
           // Continuar aunque falle la sincronización
         });
         
       } catch (error) {
-        console.error('❌ Error en inicialización:', error);
-      }
-      
-      // Detectar si estamos en Android (GameBridge disponible)
-      if (window.GameBridge) {
-        console.log('📱 Android detectado - GameBridge disponible');
-      } else {
-        console.log('🌐 Web detectado - modo offline');
+        // Error silencioso
       }
       
     });

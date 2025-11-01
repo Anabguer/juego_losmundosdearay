@@ -165,7 +165,8 @@ public class MainActivity extends AppCompatActivity {
                 ".avatar { position: absolute; } " +
                 ".speech-bubble { max-width: 90vw; word-wrap: break-word; } " +
                 ".hud-stats, .stat-item, .stat-icon, .stat-value { font-size: 16px !important; line-height: 1.4 !important; } " +
-                ".game-header { position: fixed !important; top: 0 !important; left: 20px !important; right: 20px !important; z-index: 1000 !important; transform: scale(0.9) !important; transform-origin: top center !important; } " +
+                ".game-header { position: fixed !important; top: 15px !important; left: 20px !important; right: 20px !important; z-index: 1000 !important; transform: scale(0.9) !important; transform-origin: top center !important; } " +
+                ".game-header-pueblo { top: 0 !important; } " +
                 ".guide-text, .guide-subtitle { font-size: 16px !important; top: 15px !important; left: 50% !important; transform: translateX(-50%) !important; z-index: 1001 !important; } " +
                 ".guide-subtitle { font-size: 12px !important; top: 35px !important; } " +
                 "html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; height: 100% !important; }";

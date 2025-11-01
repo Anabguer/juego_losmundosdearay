@@ -3,17 +3,54 @@
    Reproduce background.mp3 solo en los juegos
    ======================================== */
 
-let backgroundMusic = null;
+// Usar variable global compartida para evitar múltiples instancias
+let backgroundMusic = window._backgroundMusicInstance || null;
 let isMusicPlaying = false;
+
+// Función para detener cualquier música anterior
+const stopAllMusic = () => {
+  // Detener música global si existe
+  if (window._backgroundMusicInstance) {
+    try {
+      window._backgroundMusicInstance.pause();
+      window._backgroundMusicInstance.currentTime = 0;
+    } catch (e) {
+      console.log('Error deteniendo música anterior:', e);
+    }
+  }
+  // Detener esta instancia local si existe
+  if (backgroundMusic) {
+    try {
+      backgroundMusic.pause();
+      backgroundMusic.currentTime = 0;
+    } catch (e) {
+      console.log('Error deteniendo música local:', e);
+    }
+  }
+  isMusicPlaying = false;
+};
 
 // Función para inicializar la música de fondo
 const initBackgroundMusic = () => {
-  if (backgroundMusic) return;
+  // Si ya existe una instancia global, usarla
+  if (window._backgroundMusicInstance) {
+    backgroundMusic = window._backgroundMusicInstance;
+    // Verificar si está reproduciéndose
+    isMusicPlaying = !window._backgroundMusicInstance.paused;
+    return;
+  }
   
+  // Detener cualquier música anterior antes de crear nueva
+  stopAllMusic();
+  
+  // Crear nueva instancia global
   backgroundMusic = new Audio('audio/background.mp3');
   backgroundMusic.loop = true;
   backgroundMusic.volume = 0.3; // Volumen moderado
   backgroundMusic.preload = 'auto';
+  
+  // Guardar como instancia global compartida
+  window._backgroundMusicInstance = backgroundMusic;
   
   // Manejar errores de carga
   backgroundMusic.addEventListener('error', (e) => {
@@ -34,8 +71,17 @@ const playBackgroundMusic = () => {
     return;
   }
   
+  // Detener cualquier música anterior antes de iniciar nueva
+  stopAllMusic();
+  
   if (!backgroundMusic) {
     initBackgroundMusic();
+  }
+  
+  // Verificar si ya está reproduciéndose (usando la instancia global)
+  if (window._backgroundMusicInstance && !window._backgroundMusicInstance.paused) {
+    console.log('🎵 Música ya está reproduciéndose');
+    return;
   }
   
   if (backgroundMusic && !isMusicPlaying) {
@@ -53,6 +99,11 @@ const playBackgroundMusic = () => {
 
 // Función para pausar música
 const pauseBackgroundMusic = () => {
+  // Pausar instancia global si existe
+  if (window._backgroundMusicInstance) {
+    window._backgroundMusicInstance.pause();
+  }
+  // Pausar instancia local si existe
   if (backgroundMusic && isMusicPlaying) {
     backgroundMusic.pause();
     isMusicPlaying = false;
@@ -62,12 +113,8 @@ const pauseBackgroundMusic = () => {
 
 // Función para detener música completamente
 const stopBackgroundMusic = () => {
-  if (backgroundMusic) {
-    backgroundMusic.pause();
-    backgroundMusic.currentTime = 0;
-    isMusicPlaying = false;
-    console.log('⏹️ Música de fondo detenida');
-  }
+  stopAllMusic();
+  console.log('⏹️ Música de fondo detenida');
 };
 
 // Función para verificar si estamos en un juego
@@ -101,6 +148,9 @@ const handlePageChange = () => {
 
 // Inicializar cuando se carga la página
 document.addEventListener('DOMContentLoaded', () => {
+  // Detener cualquier música anterior al cargar nueva página
+  stopAllMusic();
+  
   initBackgroundMusic();
   handlePageChange();
 });

@@ -11,7 +11,7 @@
 <body>
   
   <!-- Header / HUD -->
-  <header class="game-header">
+  <header class="game-header game-header-pueblo">
     <h1>🌟 Aray</h1>
     <div class="hud-chips">
       <div class="chip">

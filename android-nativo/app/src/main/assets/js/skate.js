@@ -286,9 +286,15 @@ const drawSky = () => {
 // Loop del juego
 let lastTime = Date.now();
 let animationId;
+window.animationId = null; // Exponer globalmente para pausa desde Android
 
 const gameLoop = () => {
   if (state.gameOver) return;
+  
+  // Verificar si el juego está pausado (desde anuncios)
+  if (window._isGamePaused === true) {
+    return; // No ejecutar el loop si está pausado
+  }
   
   const now = Date.now();
   const deltaTime = (now - lastTime) / 1000; // Convertir a SEGUNDOS (como Dino)
@@ -377,7 +383,32 @@ const gameLoop = () => {
   // Actualizar HUD (solo header, no canvas)
   updateGameHUD();
   
-  animationId = requestAnimationFrame(gameLoop);
+  // Solo continuar el loop si no está pausado
+  if (window._isGamePaused !== true) {
+    animationId = requestAnimationFrame(gameLoop);
+    window.animationId = animationId; // Exponer globalmente
+  }
+};
+
+// Funciones globales para pausar/reanudar desde Android
+window.gamePause = () => {
+  console.log('⏸️ gamePause() llamado desde Android');
+  window._isGamePaused = true;
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+    window.animationId = null;
+  }
+};
+
+window.gameResume = () => {
+  console.log('▶️ gameResume() llamado desde Android');
+  window._isGamePaused = false;
+  // Reanudar el gameLoop si el juego está corriendo y no está gameOver
+  if (state.running && !state.gameOver && !animationId) {
+    lastTime = Date.now(); // Resetear tiempo para evitar saltos
+    gameLoop();
+  }
 };
 
 // Actualizar jugador (salto) - FÍSICA EXACTA DEL DINO

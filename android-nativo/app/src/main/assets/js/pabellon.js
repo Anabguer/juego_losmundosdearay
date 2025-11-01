@@ -11,6 +11,7 @@ const BEST_KEY = 'pabellon';
 // Canvas y contexto
 let canvas, ctx, dpr;
 let animationId;
+window.animationId = null; // Exponer globalmente para pausa desde Android
 
 // Cargar imágenes de demonios
 const demonImages = [];
@@ -214,6 +215,11 @@ const initGame = () => {
 const gameLoop = () => {
   if (state.gameOver) return;
   
+  // Verificar si el juego está pausado (desde anuncios)
+  if (window._isGamePaused === true) {
+    return; // No ejecutar el loop si está pausado
+  }
+  
   const width = canvas.width / dpr;
   const height = canvas.height / dpr;
   
@@ -372,7 +378,31 @@ const gameLoop = () => {
   // Dibujar partículas de efectos (encima de todo)
   drawParticles();
   
-  animationId = requestAnimationFrame(gameLoop);
+  // Solo continuar el loop si no está pausado
+  if (window._isGamePaused !== true) {
+    animationId = requestAnimationFrame(gameLoop);
+    window.animationId = animationId; // Exponer globalmente
+  }
+};
+
+// Funciones globales para pausar/reanudar desde Android
+window.gamePause = () => {
+  console.log('⏸️ gamePause() llamado desde Android');
+  window._isGamePaused = true;
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+    window.animationId = null;
+  }
+};
+
+window.gameResume = () => {
+  console.log('▶️ gameResume() llamado desde Android');
+  window._isGamePaused = false;
+  // Reanudar el gameLoop si el juego no está gameOver
+  if (!state.gameOver && !animationId) {
+    gameLoop();
+  }
 };
 
 // Nueva oleada (progresiva)

@@ -11,6 +11,7 @@ const BEST_KEY = 'informatica';
 // Canvas y contexto
 let canvas, ctx, dpr;
 let animationId;
+window.animationId = null; // Exponer globalmente para pausa desde Android
 let spawnTimer;
 
 // Estado del juego
@@ -234,6 +235,11 @@ let lastTime = 0;
 const gameLoop = (timestamp = 0) => {
   if (state.gameOver) return;
   
+  // Verificar si el juego está pausado (desde anuncios)
+  if (window._isGamePaused === true) {
+    return; // No ejecutar el loop si está pausado
+  }
+  
   const deltaTime = (timestamp - lastTime) / 1000;
   lastTime = timestamp;
   
@@ -252,7 +258,32 @@ const gameLoop = (timestamp = 0) => {
   
   draw();
   
-  animationId = requestAnimationFrame(gameLoop);
+  // Solo continuar el loop si no está pausado
+  if (window._isGamePaused !== true) {
+    animationId = requestAnimationFrame(gameLoop);
+    window.animationId = animationId; // Exponer globalmente
+  }
+};
+
+// Funciones globales para pausar/reanudar desde Android
+window.gamePause = () => {
+  console.log('⏸️ gamePause() llamado desde Android');
+  window._isGamePaused = true;
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+    window.animationId = null;
+  }
+};
+
+window.gameResume = () => {
+  console.log('▶️ gameResume() llamado desde Android');
+  window._isGamePaused = false;
+  // Reanudar el gameLoop si el juego no está gameOver
+  if (!state.gameOver && !animationId) {
+    lastTime = 0; // Resetear tiempo para evitar saltos
+    gameLoop(performance.now ? performance.now() : Date.now());
+  }
 };
 
 // Controla las oleadas sin depender del delta del frame

@@ -38,9 +38,26 @@ public class MainActivity extends AppCompatActivity {
         // Configurar AdMob
         Log.d("MainActivity", "Configurando AdMob...");
         adManager = new AdManager(this);
+        adManager.setWebView(webView); // Pasar WebView para pausar/reanudar juegos
+        
+        // Configurar el AdView
         AdView adView = findViewById(R.id.adView);
         Log.d("MainActivity", "AdView encontrado: " + (adView != null ? "SÍ" : "NO"));
-        adManager.setupBannerAd(adView);
+        if (adView != null) {
+            adView.setVisibility(View.VISIBLE); // Asegurar que esté visible
+            Log.d("MainActivity", "AdView visibility: " + adView.getVisibility());
+            
+            // Forzar que sea visible y tenga tamaño estándar de banner (320x50dp)
+            android.view.ViewGroup.LayoutParams params = adView.getLayoutParams();
+            if (params != null) {
+                float density = getResources().getDisplayMetrics().density;
+                params.width = (int) (320 * density);
+                params.height = (int) (50 * density);
+                adView.setLayoutParams(params);
+                Log.d("MainActivity", "Tamaño del banner establecido: " + params.width + "x" + params.height);
+            }
+            adView.requestLayout();
+        }
 
         // Crear bridge
         gameBridge = new GameBridge(this, adManager);
@@ -112,6 +129,30 @@ public class MainActivity extends AppCompatActivity {
         if (hasFocus) {
             // Re-aplicar modo inmersivo cuando la ventana gana foco
             setupImmersiveMode();
+            
+            // Cargar el banner cuando la ventana tiene foco (actividad completamente visible)
+            if (adManager != null) {
+                AdView adView = findViewById(R.id.adView);
+                if (adView != null) {
+                    android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+                    handler.postDelayed(() -> {
+                        Log.d("MainActivity", "═══════════════════════════════════════");
+                        Log.d("MainActivity", "🔄 onWindowFocusChanged - Cargando banner...");
+                        Log.d("MainActivity", "AdView encontrado: " + (adView != null ? "SÍ" : "NO"));
+                        if (adView != null) {
+                            Log.d("MainActivity", "AdView width: " + adView.getWidth() + ", height: " + adView.getHeight());
+                            Log.d("MainActivity", "AdView visibility: " + adView.getVisibility());
+                            Log.d("MainActivity", "AdView isAttachedToWindow: " + adView.isAttachedToWindow());
+                        }
+                        Log.d("MainActivity", "═══════════════════════════════════════");
+                        adManager.setupBannerAd(adView);
+                    }, 500);
+                } else {
+                    Log.e("MainActivity", "❌ AdView es null en onWindowFocusChanged!");
+                }
+            } else {
+                Log.e("MainActivity", "❌ AdManager es null en onWindowFocusChanged!");
+            }
         }
     }
 
@@ -147,18 +188,37 @@ public class MainActivity extends AppCompatActivity {
                 if (gameBridge.isUserLoggedIn()) {
                     injectUserData();
                 }
+                
+                // Inyectar código para mostrar logs en consola del navegador
+                webView.evaluateJavascript(
+                    "console.log('🔵 [Android] Página cargada: ' + window.location.href); " +
+                    "console.log('🔵 [Android] Banner debería estar visible en la parte inferior');",
+                    null
+                );
             }
         });
 
         // Cargar el juego
         webView.loadUrl("file:///android_asset/index.html");
+        
+        // El banner se cargará desde onWindowFocusChanged cuando la actividad esté completamente visible
     }
 
+    // Método para enviar logs a la consola del navegador
+    public void logToConsole(String message) {
+        if (webView != null) {
+            webView.evaluateJavascript(
+                "console.log('[Android] " + message.replace("'", "\\'") + "');",
+                null
+            );
+        }
+    }
+    
     private void injectViewportFix() {
         String css =
-                "body { margin: 0 !important; padding: 0 !important; overflow: hidden !important; } " +
-                ".map-container { width: 100vw !important; height: 100vh !important; margin: 0 !important; padding: 0 !important; } " +
-                ".map { width: 100% !important; height: calc(100% - 60px) !important; top: 60px !important; left: 0 !important; right: 0 !important; bottom: 0 !important; gap: 0 !important; grid-gap: 0 !important; column-gap: 0 !important; row-gap: 0 !important; margin: 0 !important; padding: 0 !important; border-spacing: 0 !important; } " +
+                "body { margin: 0 !important; padding: 0 !important; padding-bottom: 50px !important; overflow: hidden !important; } " +
+                ".map-container { width: 100vw !important; height: calc(100vh - 50px) !important; margin: 0 !important; padding: 0 !important; } " +
+                ".map { width: 100% !important; height: calc(100% - 60px) !important; top: 60px !important; left: 0 !important; right: 0 !important; bottom: 50px !important; gap: 0 !important; grid-gap: 0 !important; column-gap: 0 !important; row-gap: 0 !important; margin: 0 !important; padding: 0 !important; border-spacing: 0 !important; } " +
                 ".map-wrapper { width: 100% !important; height: 100% !important; margin: 0 !important; padding: 0 !important; } " +
                 ".tile { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; } " +
                 ".tile img { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; display: block !important; } " +
@@ -169,7 +229,7 @@ public class MainActivity extends AppCompatActivity {
                 ".game-header-pueblo { top: 0 !important; } " +
                 ".guide-text, .guide-subtitle { font-size: 16px !important; top: 15px !important; left: 50% !important; transform: translateX(-50%) !important; z-index: 1001 !important; } " +
                 ".guide-subtitle { font-size: 12px !important; top: 35px !important; } " +
-                "html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; height: 100% !important; }";
+                "html, body { margin: 0 !important; padding: 0 !important; padding-bottom: 50px !important; width: 100% !important; height: 100vh !important; overflow-x: hidden !important; }";
 
         webView.evaluateJavascript(
                 "var style = document.createElement('style'); " +

@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Claves Encriptadas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-generate {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-generate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-copy {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-copy:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+
+        .btn-clear {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-clear:hover {
+            background: #da190b;
+            transform: translateY(-2px);
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-label {
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 8px;
+        }
+
+        .result-value {
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            color: #333;
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e3f2fd;
+            border-radius: 8px;
+            border-left: 4px solid #2196F3;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .success {
+            background: #e8f5e9;
+            border-left-color: #4CAF50;
+            color: #2e7d32;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .options {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .option-group {
+            flex: 1;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Generador de Claves Encriptadas</h1>
+        
+        <div class="form-group">
+            <label for="inputText">Texto a encriptar:</label>
+            <textarea id="inputText" placeholder="Introduce el texto que quieres encriptar..."></textarea>
+        </div>
+
+        <div class="options">
+            <div class="option-group">
+                <label for="keyLength">Longitud de clave:</label>
+                <select id="keyLength">
+                    <option value="128">128 bits (16 caracteres)</option>
+                    <option value="256" selected>256 bits (32 caracteres)</option>
+                    <option value="512">512 bits (64 caracteres)</option>
+                </select>
+            </div>
+            <div class="option-group">
+                <label for="algorithm">Método:</label>
+                <select id="algorithm">
+                    <option value="hash">Hash (SHA-256)</option>
+                    <option value="base64" selected>Base64</option>
+                    <option value="hex">Hexadecimal</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-generate" onclick="generateKey()">Generar Clave</button>
+            <button class="btn-copy" onclick="copyToClipboard()">Copiar</button>
+            <button class="btn-clear" onclick="clearAll()">Limpiar</button>
+        </div>
+
+        <div id="success" class="success">
+            ✅ ¡Copiado al portapapeles!
+        </div>
+
+        <div class="result" id="resultContainer" style="display: none;">
+            <div class="result-label">Clave generada:</div>
+            <div class="result-value" id="result"></div>
+        </div>
+
+        <div class="info">
+            <strong>ℹ️ Información:</strong><br>
+            • <strong>Hash (SHA-256):</strong> Genera un hash único e irreversible del texto<br>
+            • <strong>Base64:</strong> Codifica el texto en formato Base64<br>
+            • <strong>Hexadecimal:</strong> Convierte el texto a representación hexadecimal<br>
+            • La longitud de clave se usa para generar claves aleatorias si el campo está vacío
+        </div>
+    </div>
+
+    <script>
+        // Generar clave encriptada
+        async function generateKey() {
+            const inputText = document.getElementById('inputText').value.trim();
+            const algorithm = document.getElementById('algorithm').value;
+            const keyLength = parseInt(document.getElementById('keyLength').value);
+            const resultContainer = document.getElementById('resultContainer');
+            const result = document.getElementById('result');
+
+            let encryptedKey = '';
+
+            try {
+                if (!inputText) {
+                    // Si no hay texto, generar una clave aleatoria
+                    encryptedKey = generateRandomKey(keyLength / 8);
+                } else {
+                    // Encriptar el texto según el método seleccionado
+                    switch (algorithm) {
+                        case 'hash':
+                            encryptedKey = await generateHash(inputText);
+                            break;
+                        case 'base64':
+                            encryptedKey = btoa(unescape(encodeURIComponent(inputText)));
+                            break;
+                        case 'hex':
+                            encryptedKey = textToHex(inputText);
+                            break;
+                    }
+                }
+
+                result.textContent = encryptedKey;
+                resultContainer.style.display = 'block';
+            } catch (error) {
+                alert('Error al generar la clave: ' + error.message);
+                console.error('Error:', error);
+            }
+        }
+
+        // Generar hash SHA-256
+        async function generateHash(text) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(text);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hashHex;
+        }
+
+        // Convertir texto a hexadecimal
+        function textToHex(text) {
+            let hex = '';
+            for (let i = 0; i < text.length; i++) {
+                const charCode = text.charCodeAt(i);
+                hex += charCode.toString(16).padStart(2, '0');
+            }
+            return hex.toUpperCase();
+        }
+
+        // Generar clave aleatoria
+        function generateRandomKey(length) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+            const randomArray = new Uint8Array(length);
+            crypto.getRandomValues(randomArray);
+            
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars[randomArray[i] % chars.length];
+            }
+            return result;
+        }
+
+        // Copiar al portapapeles
+        async function copyToClipboard() {
+            const result = document.getElementById('result').textContent;
+            const success = document.getElementById('success');
+            
+            if (!result) {
+                alert('No hay nada que copiar. Genera una clave primero.');
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(result);
+                success.style.display = 'block';
+                setTimeout(() => {
+                    success.style.display = 'none';
+                }, 2000);
+            } catch (error) {
+                // Fallback para navegadores antiguos
+                const textArea = document.createElement('textarea');
+                textArea.value = result;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                success.style.display = 'block';
+                setTimeout(() => {
+                    success.style.display = 'none';
+                }, 2000);
+            }
+        }
+
+        // Limpiar todo
+        function clearAll() {
+            document.getElementById('inputText').value = '';
+            document.getElementById('resultContainer').style.display = 'none';
+            document.getElementById('result').textContent = '';
+            document.getElementById('success').style.display = 'none';
+        }
+
+        // Permitir generar con Enter en el textarea
+        document.getElementById('inputText').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                generateKey();
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
+

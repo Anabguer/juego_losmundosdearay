@@ -605,53 +605,8 @@ export const initBackgroundMusic = () => {
   }
 };
 
-export const playBackgroundMusic = () => {
-  console.log('🎵 playBackgroundMusic() - musicEnabled:', window.musicEnabled);
-  
-  // Verificar si la música está habilitada (verificar tanto window.musicEnabled como localStorage)
-  const musicEnabled = window.musicEnabled !== false && 
-                       localStorage.getItem('musicEnabled') !== 'false' &&
-                       localStorage.getItem('musicEnabled') !== null;
-  
-  if (!musicEnabled) {
-    console.log('🔇 Música deshabilitada - no reproducir');
-    // Asegurar que esté pausada si está deshabilitada
-    if (backgroundMusic && !backgroundMusic.paused) {
-      backgroundMusic.pause();
-    }
-    return;
-  }
-  
-  // Verificar si la página está visible
-  if (document.hidden) {
-    console.log('🔇 Página oculta, no reproducir música');
-    return;
-  }
-  
-  // Usar la instancia global compartida si existe, sino inicializar
-  if (window._backgroundMusicInstance) {
-    backgroundMusic = window._backgroundMusicInstance;
-  } else if (!backgroundMusic) {
-    console.log('🎵 Inicializando backgroundMusic...');
-    initBackgroundMusic();
-  }
-  
-  // Usar la función global de background-music.js si existe para evitar duplicados
-  if (window.playBackgroundMusic && window._backgroundMusicInstance) {
-    console.log('🎵 Usando playBackgroundMusic de background-music.js');
-    window.playBackgroundMusic();
-    return;
-  }
-  
-  if (backgroundMusic) {
-    console.log('🎵 Reproduciendo música desde ui.js...');
-    backgroundMusic.play().then(() => {
-      console.log('✅ Música iniciada');
-    }).catch(e => {
-      console.error('❌ Error reproduciendo música:', e.message);
-    });
-  }
-};
+// Función eliminada - usar directamente window.playBackgroundMusic de background-music.js
+// export const playBackgroundMusic = () => { ... } // ELIMINADO - causa recursión infinita
 
 export const stopBackgroundMusic = () => {
   console.log('🔇 stopBackgroundMusic() llamado');
@@ -996,7 +951,8 @@ export const initCommonUI = () => {
   window.updateAudioToggles = updateAudioToggles;
   window.updateHUD = updateHUD;
   window.playAudioFile = playAudioFile; // Exponer globalmente para levelup.js y otros
-  window.playBackgroundMusic = playBackgroundMusic;
+  // NO reexportar playBackgroundMusic aquí - ya está definido en background-music.js
+// window.playBackgroundMusic = playBackgroundMusic; // ELIMINADO - causa recursión infinita
   window.stopBackgroundMusic = stopBackgroundMusic;
   window.setMusicEnabled = setMusicEnabled;
   

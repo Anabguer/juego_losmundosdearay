@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base href="./">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no">
+  <meta name="theme-color" content="#0e1320">
+  <meta name="description" content="Los Mundos de Aray - Standalone">
+  <link rel="icon" href="assets/img/logo.webp">
+  <title>🌟 Los Mundos de Aray</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  
+  <!-- Header / HUD -->
+  <header class="game-header game-header-pueblo">
+    <img src="assets/img/logo.webp" alt="Aray" class="game-logo">
+    <div class="hud-stats">
+      <div class="stat-item candy-pill">
+        <span class="stat-icon">🍬</span>
+        <span class="stat-value" id="hud-coins">0</span>
+      </div>
+      
+      <div class="stat-item hunger-stat hunger-bar-container">
+        <span class="stat-icon">🍪</span>
+        <div class="hunger-bar">
+          <div class="hunger-bar-fill" id="hunger-bar-fill"></div>
+        </div>
+      </div>
+      
+      <button class="btn-eat" id="btn-eat">
+        <img src="assets/img/comida.webp" alt="Comer" class="btn-eat-icon">
+      </button>
+    </div>
+    
+    <!-- Botón de login -->
+    <button id="login-btn" class="btn btn-primary" style="position: absolute; top: 1rem; right: 1rem; padding: 0.5rem 1rem; font-size: 0.9rem; z-index: 1000;">
+      🔐 Entrar
+    </button>
+  </header>
+  
+  <!-- Mapa del pueblo -->
+  <main class="map-container">
+    <div class="map-wrapper">
+      <div id="map" class="map">
+        <!-- Los tiles se generarán dinámicamente -->
+      </div>
+      
+      <!-- Avatar de Aray DENTRO del wrapper -->
+      <div id="avatar" class="avatar"></div>
+    </div>
+  </main>
+  
+  <!-- Modal de login -->
+  <div id="login-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+      <div class="modal-header">
+        <h2 style="margin: 0; color: #d900ff;">🎮 Los Mundos de Aray</h2>
+        <button id="login-modal-close" class="btn btn-outline" style="position: absolute; top: 1rem; right: 1rem; padding: 4px 6px; color: #d900ff; font-weight: 900; font-size: 1.2rem; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin: 2rem 0;">
+          <img src="assets/img/logo.webp" alt="Aray" style="width: 120px; height: 120px; border-radius: 50%; margin-bottom: 1rem;">
+        </div>
+        <p style="margin-bottom: 2rem; color: #666; font-size: 1.1rem; font-weight: 500;">Inicia sesión para guardar y ver tu ranking</p>
+        <p style="margin-bottom: 2rem; color: #999; font-size: 0.9rem;">Se guardarán tus caramelos y tu progreso entre dispositivos.</p>
+        <button id="google-signin-btn" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">
+          <span style="margin-right: 0.5rem;">🔐</span>
+          Entrar con Google
+        </button>
+        <p style="margin-top: 1rem; font-size: 0.9rem; color: #999;">
+          Al iniciar sesión, aceptas nuestros términos de uso
+        </p>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Scripts -->
+  <script type="module">
+    console.log('🌐 Cargando versión STANDALONE de Los Mundos de Aray...');
+    
+    // Importar módulos básicos
+    import { initMap } from './js/map.js';
+    import { getCoins, getEnergy, addCoins } from './js/storage.js';
+    import { updateHUD, initCommonUI } from './js/ui.js?v=3';
+    
+    // Firebase standalone
+    console.log('🔥 Cargando Firebase standalone...');
+    
+    // Importar Firebase desde CDN
+    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+    const { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+    const { getFirestore, doc, setDoc, getDoc, updateDoc, serverTimestamp, collection, query, orderBy, limit, getDocs, increment } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    
+    // Configuración de Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCZ88_2qctO684sgo28uPWFLYgWqZ5qIHk",
+      authDomain: "intocables13.firebaseapp.com",
+      projectId: "intocables13",
+      storageBucket: "intocables13.firebasestorage.app",
+      messagingSenderId: "439019722673",
+      appId: "1:439019722673:android:5a78cc103d7c93198c0f90"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    
+    console.log('✅ Firebase standalone configurado');
+    
+    // Estado del usuario
+    let currentUser = null;
+    let userData = null;
+    let localCandies = 0;
+    
+    // Funciones de autenticación
+    const signInWithGoogle = async () => {
+      try {
+        console.log('🔐 Iniciando login con Google...');
+        
+        const provider = new GoogleAuthProvider();
+        provider.addScope('profile');
+        provider.addScope('email');
+        
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        
+        console.log('✅ Login exitoso:', user.email);
+        
+        // Crear perfil de usuario
+        await createUserProfile(user);
+        
+        return { success: true, user };
+      } catch (error) {
+        console.error('❌ Error en login:', error);
+        return { success: false, error: error.message };
+      }
+    };
+    
+    const createUserProfile = async (user) => {
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (!userSnap.exists()) {
+          await setDoc(userRef, {
+            nick: null,
+            candiesTotal: 0,
+            createdAt: serverTimestamp(),
+            lastSeen: serverTimestamp(),
+            settings: { lastGameId: null }
+          });
+          console.log('✅ Nuevo usuario creado:', user.uid);
+        } else {
+          await updateDoc(userRef, { lastSeen: serverTimestamp() });
+        }
+        
+        await loadUserData(user);
+      } catch (error) {
+        console.error('❌ Error creando perfil:', error);
+      }
+    };
+    
+    const loadUserData = async (user) => {
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists()) {
+          userData = userSnap.data();
+          currentUser = user;
+          console.log('✅ Datos de usuario cargados:', userData);
+        }
+      } catch (error) {
+        console.error('❌ Error cargando datos:', error);
+      }
+    };
+    
+    const getTotalCandies = () => {
+      if (currentUser && userData) {
+        return userData.candiesTotal || 0;
+      }
+      return localCandies;
+    };
+    
+    const addCandies = async (amount = 1) => {
+      if (!currentUser) {
+        localCandies += amount;
+        localStorage.setItem('localCandies', localCandies.toString());
+        console.log(`🍬 +${amount} caramelos (offline). Total local: ${localCandies}`);
+        return { success: true, total: localCandies };
+      }
+      
+      try {
+        const userRef = doc(db, 'users', currentUser.uid);
+        await updateDoc(userRef, {
+          candiesTotal: increment(amount),
+          lastSeen: serverTimestamp()
+        });
+        
+        if (userData) {
+          userData.candiesTotal += amount;
+        }
+        
+        console.log(`🍬 +${amount} caramelos (online). Total: ${getTotalCandies()}`);
+        return { success: true, total: getTotalCandies() };
+      } catch (error) {
+        console.error('❌ Error añadiendo caramelos:', error);
+        return { success: false, error: error.message };
+      }
+    };
+    
+    // UI de autenticación
+    const showLoginModal = () => {
+      document.getElementById('login-modal').style.display = 'flex';
+    };
+    
+    const hideLoginModal = () => {
+      document.getElementById('login-modal').style.display = 'none';
+    };
+    
+    const updateAuthUI = () => {
+      const loginBtn = document.getElementById('login-btn');
+      
+      if (currentUser && userData) {
+        loginBtn.innerHTML = `👤 ${userData.nick || currentUser.displayName || 'Usuario'}`;
+        loginBtn.onclick = () => {
+          // Mostrar menú de usuario
+          alert(`Usuario: ${userData.nick || currentUser.displayName}\nCaramelos: ${getTotalCandies()}`);
+        };
+      } else {
+        loginBtn.innerHTML = '🔐 Entrar';
+        loginBtn.onclick = showLoginModal;
+      }
+    };
+    
+    const handleGoogleSignIn = async () => {
+      const btn = document.getElementById('google-signin-btn');
+      const originalText = btn.innerHTML;
+      
+      btn.disabled = true;
+      btn.innerHTML = '<span style="margin-right: 0.5rem;">⏳</span>Iniciando sesión...';
+      
+      try {
+        const result = await signInWithGoogle();
+        if (result.success) {
+          hideLoginModal();
+          updateAuthUI();
+        } else {
+          alert('Error al iniciar sesión: ' + result.error);
+        }
+      } catch (error) {
+        alert('Error al iniciar sesión: ' + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    };
+    
+    // Inicializar cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('🚀 Inicializando aplicación standalone...');
+      
+      // Inicializar UI básica
+      initCommonUI();
+      updateHUD();
+      
+      // Inicializar mapa después de un pequeño delay para asegurar que todo esté cargado
+      setTimeout(() => {
+        console.log('🗺️ Inicializando mapa...');
+        initMap();
+        console.log('✅ Mapa inicializado');
+      }, 500);
+      
+      // Configurar botones
+      document.getElementById('login-btn').onclick = showLoginModal;
+      document.getElementById('login-modal-close').onclick = hideLoginModal;
+      document.getElementById('google-signin-btn').onclick = handleGoogleSignIn;
+      
+      // Listener de autenticación
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          console.log('👤 Usuario autenticado:', user.email);
+          await loadUserData(user);
+        } else {
+          console.log('👤 Usuario no autenticado');
+          currentUser = null;
+          userData = null;
+        }
+        updateAuthUI();
+      });
+      
+      // Sincronizar caramelos locales
+      const localCandiesStr = localStorage.getItem('localCandies');
+      if (localCandiesStr) {
+        localCandies = parseInt(localCandiesStr, 10);
+        updateHUD();
+      }
+      
+      console.log('✅ Aplicación standalone inicializada');
+    });
+    
+    // Hacer funciones disponibles globalmente
+    window.addCandies = addCandies;
+    window.getTotalCandies = getTotalCandies;
+    window.showLoginModal = showLoginModal;
+  </script>
+</body>
+</html>

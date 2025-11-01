@@ -25,7 +25,7 @@ const createLoginModal = () => {
       </div>
       <div class="modal-body">
         <div style="margin: 2rem 0;">
-          <img src="assets/img/logo.png" alt="Aray" style="width: 120px; height: 120px; border-radius: 50%; margin-bottom: 1rem;">
+          <img src="assets/img/logo.webp" alt="Aray" style="width: 120px; height: 120px; border-radius: 50%; margin-bottom: 1rem;">
         </div>
         <p style="margin-bottom: 2rem; color: #666; font-size: 1.1rem; font-weight: 500;">Inicia sesión para guardar y ver tu ranking</p>
         <p style="margin-bottom: 2rem; color: #999; font-size: 0.9rem;">Se guardarán tus caramelos y tu progreso entre dispositivos.</p>
@@ -187,7 +187,7 @@ const loadRanking = async () => {
           <div style="width: 40px; text-align: center; font-weight: bold; color: #d900ff;">
             ${position <= 3 ? ['🥇', '🥈', '🥉'][position - 1] : position}
           </div>
-          <img src="${user.photoURL || 'assets/img/logo.png'}" alt="Avatar" style="
+          <img src="${user.photoURL || 'assets/img/logo.webp'}" alt="Avatar" style="
             width: 40px; height: 40px; border-radius: 50%; margin: 0 12px;
           ">
           <div style="flex: 1;">
@@ -324,7 +324,7 @@ const updateUserMenu = (user, userData) => {
     loginBtn.style.display = 'none';
     logoutBtn.style.display = 'block';
     
-    document.getElementById('user-avatar').src = userData.photoURL || 'assets/img/logo.png';
+    document.getElementById('user-avatar').src = userData.photoURL || 'assets/img/logo.webp';
     document.getElementById('user-name').textContent = userData.nick || userData.displayName || 'Usuario';
     document.getElementById('user-candies').textContent = `🍬 ${getTotalCandies().toLocaleString()}`;
   } else {

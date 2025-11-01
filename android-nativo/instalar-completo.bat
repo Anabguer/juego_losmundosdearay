@@ -86,3 +86,6 @@ echo - Deberías ver logs de sincronización automática
 echo - Los datos se guardarán en la nueva estructura unificada
 echo.
 pause
+
+
+

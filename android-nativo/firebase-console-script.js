@@ -185,3 +185,6 @@ verificarEstructura().then(result => {
   console.log('\n✅ Verificación completada');
   console.log('💡 Si quieres limpiar Firebase, ejecuta: limpiarFirebase()');
 });
+
+
+

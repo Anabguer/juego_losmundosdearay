@@ -9,7 +9,7 @@
 import { getCoins, getEnergy, setEnergy, setCoins, getBest, initGuestDataMigration } from './storage.js';
 import { updateHUD, toast, showModal, hideModal, playSound, playAudioFile, vibrate } from './ui.js';
 import { getAraySprite } from './sprites.js';
-import { initAuth, isLoggedIn, getCurrentUser, login, register, logout, getRankingGlobal } from './auth.js';
+import { getRankingGlobal } from './auth.js';
 
 // Dimensiones
 const MAP_WIDTH = 10;

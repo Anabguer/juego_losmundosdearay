@@ -10,17 +10,28 @@ android {
     defaultConfig {
         applicationId "com.intocables.losmundosdearay"
         minSdk 23
-        targetSdk 34
-        versionCode 3
+        targetSdk 35
+        versionCode 4
         versionName "1.2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        release {
+            // Keystore de producción para Google Play Console
+            storeFile file('release.keystore')
+            storePassword 'losmundos2024'
+            keyAlias 'losmundosdearay'
+            keyPassword 'losmundos2024'
+        }
     }
 
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
     

@@ -1,0 +1,19 @@
+{
+  "appId": "com.intocables.losmundosdearay",
+  "appName": "Los Mundos de Aray",
+  "webDir": "www",
+  "server": {
+    "url": "http://localhost:8000",
+    "cleartext": true
+  },
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "GoogleAuth": {
+      "scopes": ["profile", "email"],
+      "serverClientId": "989954746255-gpudi6ehmo4o7drku379b71kudr5t526.apps.googleusercontent.com",
+      "forceCodeForRefreshToken": true
+    }
+  }
+}

@@ -23,10 +23,10 @@ import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
 public class AdManager {
     private static final String TAG = "AdManager";
     
-    // IDs de AdMob - USANDO IDs DE PRUEBA PARA DESARROLLO
-    private static final String BANNER_AD_ID = "ca-app-pub-3940256099942544/6300978111"; // ID de prueba
-    private static final String INTERSTITIAL_AD_ID = "ca-app-pub-3940256099942544/1033173712"; // ID de prueba
-    private static final String REWARDED_AD_ID = "ca-app-pub-3940256099942544/5224354917"; // ID de prueba
+    // IDs de AdMob - PRODUCCIÓN
+    private static final String BANNER_AD_ID = "ca-app-pub-1338301235950360/1577253279"; // Banner producción
+    private static final String INTERSTITIAL_AD_ID = "ca-app-pub-1338301235950360/3137746954"; // Intersticial producción
+    private static final String REWARDED_AD_ID = "ca-app-pub-1338301235950360/2974095428"; // Rewarded producción
     
     private Context context;
     private AdView bannerAd;

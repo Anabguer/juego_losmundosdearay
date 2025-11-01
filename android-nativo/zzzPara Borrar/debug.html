@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug localStorage</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 10px;
+            overflow-y: auto;
+            max-height: calc(100vh - 40px);
+        }
+        .section { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            background: #e8f5e8; 
+        }
+        .warning { 
+            background: #fff3cd; 
+            color: #856404; 
+            padding: 10px; 
+            border-radius: 5px; 
+            margin: 10px 0; 
+        }
+        .success { 
+            background: #d4edda; 
+            color: #155724; 
+            padding: 10px; 
+            border-radius: 5px; 
+            margin: 10px 0; 
+        }
+        button { 
+            background: #dc3545; 
+            color: white; 
+            border: none; 
+            padding: 15px 30px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 10px 5px; 
+            font-size: 16px;
+        }
+        button:hover { 
+            background: #c82333; 
+        }
+        .button-danger {
+            background: #dc3545;
+        }
+        .button-danger:hover {
+            background: #c82333;
+        }
+        .button-close {
+            background: #6c757d;
+        }
+        .button-close:hover {
+            background: #5a6268;
+        }
+        .button-clear {
+            background: #ffc107;
+            color: #000;
+        }
+        .button-clear:hover {
+            background: #e0a800;
+        }
+        pre { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 5px; 
+            overflow-x: auto; 
+            overflow-y: auto;
+            font-size: 12px;
+            max-width: 100%;
+            max-height: 60vh;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Debug localStorage</h1>
+        <p>Página para verificar datos almacenados localmente.</p>
+        
+        <div style="margin: 20px 0;">
+            <button class="button-clear" onclick="showClearConfirmation()">Limpiar localStorage</button>
+            <button class="button-close" onclick="closeDebug()">Cerrar</button>
+        </div>
+        
+        <div id="clearConfirmation" style="display: none; margin: 20px 0; padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px;">
+            <p><strong>¿Estás seguro de que quieres eliminar TODOS los datos de localStorage?</strong></p>
+            <p>Esta acción no se puede deshacer.</p>
+            <button class="button-danger" onclick="confirmClear()">SÍ, ELIMINAR TODO</button>
+            <button class="button-close" onclick="cancelClear()">Cancelar</button>
+        </div>
+        
+        <div class="section">
+            <h2>localStorage</h2>
+            <div id="localStorageData">Cargando...</div>
+        </div>
+    </div>
+
+    <script>
+        function getLocalStorageData() {
+            var data = {};
+            
+            try {
+                for (var i = 0; i < localStorage.length; i++) {
+                    var key = localStorage.key(i);
+                    var value = localStorage.getItem(key);
+                    data[key] = value;
+                }
+            } catch (e) {
+                console.error('Error accediendo a localStorage:', e);
+            }
+            
+            return data;
+        }
+
+        function displayLocalStorageData() {
+            var data = getLocalStorageData();
+            var div = document.getElementById('localStorageData');
+            
+            if (Object.keys(data).length === 0) {
+                div.innerHTML = '<div class="warning">localStorage vacío</div>';
+            } else {
+                // NO truncar valores - mostrar completos con JSON.stringify para mejor formato
+                var html = '<div class="success">Datos encontrados (' + Object.keys(data).length + ' elementos):</div><pre id="dataPreview" style="background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; overflow-y: auto; font-size: 12px; max-width: 100%; max-height: 70vh; word-wrap: break-word; white-space: pre-wrap;">';
+                html += JSON.stringify(data, null, 2);
+                html += '</pre>';
+                div.innerHTML = html;
+            }
+        }
+
+        function closeDebug() {
+            window.location.href = 'index.html';
+        }
+
+        function showClearConfirmation() {
+            console.log('showClearConfirmation() llamado');
+            document.getElementById('clearConfirmation').style.display = 'block';
+        }
+
+        function confirmClear() {
+            console.log('confirmClear() llamado - iniciando limpieza...');
+            
+            try {
+                localStorage.clear();
+                console.log('localStorage.clear() ejecutado exitosamente');
+                
+                alert('✅ localStorage limpiado correctamente.');
+                
+                displayLocalStorageData();
+                console.log('Display actualizado después de limpiar');
+                
+                // Ocultar confirmación
+                document.getElementById('clearConfirmation').style.display = 'none';
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al limpiar: ' + error.message);
+            }
+        }
+
+        function cancelClear() {
+            console.log('cancelClear() llamado');
+            document.getElementById('clearConfirmation').style.display = 'none';
+        }
+
+        // Inicializar cuando se carga la página
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', displayLocalStorageData);
+        } else {
+            displayLocalStorageData();
+        }
+    </script>
+</body>
+</html>

@@ -25,6 +25,10 @@ android-nativo/build/
 pueblito/android/build/
 pueblito/android/app/build/
 
+# Gradle cache
+.gradle/
+android-nativo/.gradle/
+
 # Android generated files
 android-nativo/app/src/main/assets/
 android-nativo/app/build/intermediates/

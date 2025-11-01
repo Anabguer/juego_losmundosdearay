@@ -58,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
         // Crear bridge
         gameBridge = new GameBridge(this, adManager);
         webView.addJavascriptInterface(gameBridge, "GameBridge");
-        webView.addJavascriptInterface(this, "MainActivity");
+        // MainActivity interface removida - no se usa desde JavaScript
     }
 
     private void setupImmersiveMode() {

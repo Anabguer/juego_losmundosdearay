@@ -16,13 +16,13 @@ let animationId;
 const demonImages = [];
 for (let i = 1; i <= 4; i++) {
   const img = new Image();
-  img.src = `img/enemigos/zombie${i}.png`;
+  img.src = `img/enemigos/zombie${i}.webp`;
   demonImages.push(img);
 }
 
 // Cargar fondo del pabellón
 const bgImage = new Image();
-bgImage.src = 'img/fondos/pabellon.png';
+bgImage.src = 'img/fondos/pabellon.webp';
 
 // Estado del juego
 const state = {

@@ -470,7 +470,8 @@ export const formatNumber = (num) => {
 // ========== SONIDOS (SIMPLE) ==========
 let audioContext;
 let audioEnabled = null; // null hasta que se carguen desde Firebase
-let backgroundMusic = null;
+// Usar la instancia global compartida de background-music.js en lugar de crear una nueva
+let backgroundMusic = null; // Se inicializará usando window._backgroundMusicInstance
 let musicEnabled = null; // null hasta que se carguen desde Firebase
 let audioPreferencesLoaded = false; // Flag para saber si ya se cargaron las preferencias
 
@@ -585,6 +586,14 @@ export const playSound = (type = 'click') => {
 
 // ========== MÚSICA DE FONDO ==========
 export const initBackgroundMusic = () => {
+  // Usar la instancia global compartida de background-music.js si existe
+  if (window._backgroundMusicInstance) {
+    backgroundMusic = window._backgroundMusicInstance;
+    console.log('🎵 Usando instancia global compartida de backgroundMusic');
+    return;
+  }
+  
+  // Si no existe la instancia global, usar la de ui.js (para compatibilidad)
   if (!backgroundMusic) {
     backgroundMusic = new Audio('audio/background.mp3');
     backgroundMusic.loop = true;
@@ -592,7 +601,7 @@ export const initBackgroundMusic = () => {
     backgroundMusic.preload = 'auto';
     
     // NO reproducir automáticamente - esperar a que se carguen las preferencias
-    console.log('🎵 BackgroundMusic inicializado, esperando preferencias...');
+    console.log('🎵 BackgroundMusic inicializado en ui.js, esperando preferencias...');
   }
 };
 
@@ -619,14 +628,23 @@ export const playBackgroundMusic = () => {
     return;
   }
   
-  // Inicializar si no existe
-  if (!backgroundMusic) {
+  // Usar la instancia global compartida si existe, sino inicializar
+  if (window._backgroundMusicInstance) {
+    backgroundMusic = window._backgroundMusicInstance;
+  } else if (!backgroundMusic) {
     console.log('🎵 Inicializando backgroundMusic...');
     initBackgroundMusic();
   }
   
+  // Usar la función global de background-music.js si existe para evitar duplicados
+  if (window.playBackgroundMusic && window._backgroundMusicInstance) {
+    console.log('🎵 Usando playBackgroundMusic de background-music.js');
+    window.playBackgroundMusic();
+    return;
+  }
+  
   if (backgroundMusic) {
-    console.log('🎵 Reproduciendo música...');
+    console.log('🎵 Reproduciendo música desde ui.js...');
     backgroundMusic.play().then(() => {
       console.log('✅ Música iniciada');
     }).catch(e => {
@@ -638,8 +656,17 @@ export const playBackgroundMusic = () => {
 export const stopBackgroundMusic = () => {
   console.log('🔇 stopBackgroundMusic() llamado');
   
-  // Si backgroundMusic no está inicializado, intentar inicializarlo primero
-  if (!backgroundMusic) {
+  // Usar la función global de background-music.js si existe para evitar duplicados
+  if (window.stopBackgroundMusic && window._backgroundMusicInstance) {
+    console.log('🔇 Usando stopBackgroundMusic de background-music.js');
+    window.stopBackgroundMusic();
+    return;
+  }
+  
+  // Usar la instancia global compartida si existe
+  if (window._backgroundMusicInstance) {
+    backgroundMusic = window._backgroundMusicInstance;
+  } else if (!backgroundMusic) {
     console.log('🔇 backgroundMusic no está inicializado, inicializando...');
     initBackgroundMusic();
   }
@@ -1155,7 +1182,7 @@ export const initCommonUI = () => {
     
     console.log('🔄 Variables globales actualizadas - audioEnabled:', window.audioEnabled, 'musicEnabled:', window.musicEnabled);
     
-    // Aplicar cambios de música inmediatamente
+    // Aplicar cambios de música inmediatamente - se reproduce en TODAS las páginas si está habilitada
     if (musicEnabled) {
       console.log('🎵 Activando música de fondo desde callback...');
       if (window.playBackgroundMusic) {
@@ -1236,8 +1263,10 @@ export const refreshAudioFromBridge = () => {
       // refleja en UI si procede
       if (typeof updateAudioToggles === 'function') updateAudioToggles();
 
-      // música on/off inmediato
-      if (window.musicEnabled && window.playBackgroundMusic) window.playBackgroundMusic();
+      // música on/off inmediato - se reproduce en TODAS las páginas si está habilitada
+      if (window.musicEnabled && window.playBackgroundMusic) {
+        window.playBackgroundMusic();
+      }
       if (!window.musicEnabled && window.stopBackgroundMusic) window.stopBackgroundMusic();
 
       return true;

@@ -14,7 +14,7 @@ let animationId;
 
 // Cargar imagen de Aray
 const arayImage = new Image();
-arayImage.src = 'img/personaje/aray_base.png';
+arayImage.src = 'img/personaje/aray_base.webp';
 
 // Estado del juego
 const state = {
@@ -36,13 +36,21 @@ const state = {
   offsetY: 0
 };
 
+// --- Ajustes finos de movimiento y colisión ---
+const PLAYER_WIDTH_CELLS = 0.7;   // hitbox horizontal (coherente con drawPlayer)
+const EPSILON = 0.02;             // tolerancia flotante
+const MIN_OVERLAP_FRACTION = 0.50; // al menos 50% del jugador debe estar sobre el tronco
+const CENTER_MARGIN_FRACTION = 0.10; // margen interior (10%) para que no valgan bordes
+const H_STEP_CELLS = 0.25;        // paso lateral pequeño
+const V_STEP_ROWS  = 1;           // salto vertical normal
+
 // Cargar imagen de fondo del río
 const riverBgImage = new Image();
-riverBgImage.src = 'img/fondos/rio.png';
+riverBgImage.src = 'img/fondos/rio.webp';
 
 // Cargar imagen de tronco
 const logImage = new Image();
-logImage.src = 'img/tronco1.png';
+logImage.src = 'img/tronco1.webp';
 
 // Configuración base de carriles (se ajusta según nivel)
 const getLanes = (level) => {
@@ -140,66 +148,54 @@ const initGame = () => {
   gameLoop();
 };
 
-// Verificar colisión con agua (función centralizada que siempre usa valores actuales)
+// Verificar colisión con agua (centralizada)
 const checkWaterCollision = () => {
   const currentLane = LANES[state.player.gridY];
   if (currentLane && currentLane.type === 'water') {
-    // Siempre verificar con los troncos actuales (no usar referencias obsoletas)
-    let onLog = false;
-    let matchingLog = null;
-    
-    // Obtener posición actual del jugador
-    const playerPos = state.player.gridX;
-    
-    // Buscar tronco en la misma fila que contenga al jugador
+    const pLeft  = state.player.gridX;
+    const pRight = state.player.gridX + PLAYER_WIDTH_CELLS;
+    const pCenter = (pLeft + pRight) / 2;
+
+    let bestLog = null;
+    let bestScore = -Infinity;
+
     for (const log of state.logs) {
-      if (log.row === state.player.gridY) {
-        // Calcular posición actual del tronco (en celdas)
-        // log.x está en pixels, convertimos a celdas
-        const logStart = log.x / state.cellSize;
-        // log.width ya está en celdas (no en pixels)
-        const logEnd = logStart + log.width;
-        
-        // Debug logging solo ocasionalmente para evitar spam
-        if (Math.random() < 0.05) { // 5% de probabilidad
-          console.log(`🔍 Verificando: jugador=${playerPos.toFixed(2)}, tronco fila=${log.row}, inicio=${logStart.toFixed(2)}, fin=${logEnd.toFixed(2)}, log.x=${log.x.toFixed(1)}px, log.width=${log.width.toFixed(2)}celdas`);
-        }
-        
-        // Verificar si el jugador está dentro del tronco (incluyendo bordes exactos)
-        // NO usar margen negativo porque puede causar falsos positivos
-        // El jugador debe estar estrictamente dentro del rango del tronco
-        if (playerPos >= logStart && playerPos <= logEnd) {
-          onLog = true;
-          matchingLog = log;
-          if (Math.random() < 0.05) { // 5% de probabilidad
-            console.log(`✅ Jugador EN tronco: pos=${playerPos.toFixed(2)}, tronco=${logStart.toFixed(2)}-${logEnd.toFixed(2)}`);
-          }
-          break;
-        }
+      if (log.row !== state.player.gridY) continue;
+
+      const lLeft  = log.x / state.cellSize;
+      const lRight = lLeft + log.width;
+
+      // 1️⃣ Centro del jugador dentro del tronco con margen
+      const centerMargin = Math.max(log.width * CENTER_MARGIN_FRACTION, 0.05);
+      const centerInside =
+        pCenter > (lLeft + centerMargin) && pCenter < (lRight - centerMargin);
+      if (!centerInside) continue;
+
+      // 2️⃣ Solape mínimo relativo (porcentaje del ancho del jugador)
+      const overlap = Math.min(pRight, lRight) - Math.max(pLeft, lLeft);
+      const minOverlap = PLAYER_WIDTH_CELLS * MIN_OVERLAP_FRACTION - EPSILON;
+      if (overlap <= minOverlap) continue;
+
+      // 3️⃣ Puntuación por solape (elige el tronco más "bajo el jugador")
+      const lCenter = (lLeft + lRight) / 2;
+      const score = overlap - Math.abs(pCenter - lCenter) * 0.1;
+      if (score > bestScore) {
+        bestScore = score;
+        bestLog = log;
       }
     }
-    
-    // Actualizar estado del jugador
-    if (onLog) {
-      state.player.onLog = matchingLog;
+
+    if (bestLog) {
+      state.player.onLog = bestLog;
     } else {
-      // El jugador está en agua sin tronco - GAME OVER
-      console.log(`❌ Jugador EN AGUA - terminando juego (fila ${state.player.gridY}, pos ${state.player.gridX.toFixed(2)})`);
-      console.log(`🔍 Troncos disponibles en esta fila:`, state.logs.filter(log => log.row === state.player.gridY).map(log => ({
-        row: log.row,
-        start: (log.x / state.cellSize).toFixed(2),
-        end: ((log.x / state.cellSize) + log.width).toFixed(2),
-        width: log.width.toFixed(2)
-      })));
       state.player.onLog = null;
       endGame('🌊 ¡Caíste al agua!');
-      return true; // Indica que el juego terminó
+      return true;
     }
   } else {
-    // No está en agua, resetear estado
-    state.player.onLog = null;
+    state.player.onLog = null; // zona segura
   }
-  return false; // El juego continúa
+  return false;
 };
 
 // Crear tronco (con tamaño según nivel)
@@ -455,41 +451,36 @@ const setupControls = () => {
   // Teclado
   window.addEventListener('keydown', (e) => {
     if (state.gameOver) return;
-    
+
     let newX = state.player.gridX;
     let newY = state.player.gridY;
-    
+
     if (e.key === 'ArrowUp') {
       e.preventDefault();
-      newY = Math.max(0, state.player.gridY - 1);
+      newY = Math.max(0, state.player.gridY - V_STEP_ROWS);
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      newY = Math.min(state.rows - 1, state.player.gridY + 1);
+      newY = Math.min(state.rows - 1, state.player.gridY + V_STEP_ROWS);
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      newX = Math.max(0, state.player.gridX - 1);
+      newX = Math.max(0, state.player.gridX - H_STEP_CELLS);
     } else if (e.key === 'ArrowRight') {
       e.preventDefault();
-      newX = Math.min(state.cols - 1, state.player.gridX + 1);
+      newX = Math.min(state.cols - H_STEP_CELLS, state.player.gridX + H_STEP_CELLS);
     }
-    
+
     if (newX !== state.player.gridX || newY !== state.player.gridY) {
       state.player.gridX = newX;
       state.player.gridY = newY;
-      state.player.onLog = null; // Resetear antes de verificar
-      
-      // Verificar inmediatamente si está en agua sin tronco
+      state.player.onLog = null;
+
       const currentLane = LANES[state.player.gridY];
       if (currentLane && currentLane.type === 'water') {
-        console.log(`🎮 Jugador se movió a fila ${state.player.gridY}, posición ${state.player.gridX.toFixed(2)} (AGUA)`);
-        if (checkWaterCollision()) {
-          return; // El juego terminó
-        }
+        if (checkWaterCollision()) return;
       } else {
-        // No está en agua, verificar colisiones de todas formas por seguridad
         checkWaterCollision();
       }
-      
+
       playSound('click');
       vibrate(10);
     }
@@ -512,19 +503,15 @@ const setupControls = () => {
     // Calcular posición de Aray en pantalla
     const arayScreenX = state.player.gridX * state.cellSize + state.cellSize / 2;
     
-    // Determinar dirección según dónde tocó respecto a Aray
+    // Determinar dirección según toque
     if (y < arayScreenY - state.cellSize * 0.3) {
-      // Arriba de Aray = SUBIR
-      newY = Math.max(0, state.player.gridY - 1);
+      newY = Math.max(0, state.player.gridY - V_STEP_ROWS);
     } else if (y > arayScreenY + state.cellSize * 0.3) {
-      // Abajo de Aray = BAJAR
-      newY = Math.min(state.rows - 1, state.player.gridY + 1);
+      newY = Math.min(state.rows - 1, state.player.gridY + V_STEP_ROWS);
     } else if (x < arayScreenX - state.cellSize * 0.3) {
-      // Izquierda de Aray = MOVER IZQUIERDA
-      newX = Math.max(0, state.player.gridX - 1);
+      newX = Math.max(0, state.player.gridX - H_STEP_CELLS);
     } else if (x > arayScreenX + state.cellSize * 0.3) {
-      // Derecha de Aray = MOVER DERECHA
-      newX = Math.min(state.cols - 1, state.player.gridX + 1);
+      newX = Math.min(state.cols - H_STEP_CELLS, state.player.gridX + H_STEP_CELLS);
     }
     
     if (newX !== state.player.gridX || newY !== state.player.gridY) {

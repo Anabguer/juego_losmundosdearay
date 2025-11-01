@@ -10,27 +10,27 @@
 export const SPRITES = {
   // 🧒 Aray (niño protagonista)
   aray: {
-    base: 'img/personaje/aray_base.png',
+    base: 'img/personaje/aray_base.webp',
     run: [
-      'img/personaje/aray_run1.png',
-      'img/personaje/aray_run2.png'
+      'img/personaje/aray_run1.webp',
+      'img/personaje/aray_run2.webp'
     ],
     head: {
-      neutral: 'img/personaje/aray_head_neutral.png?v=2',
-      happy: 'img/personaje/aray_head_happy2.png?v=3',
-      angry: 'img/personaje/aray_head_angry.png?v=2',
-      sleep: 'img/personaje/aray_head_sleep.png?v=2',
+      neutral: 'img/personaje/aray_head_neutral.webp?v=2',
+      happy: 'img/personaje/aray_head_happy2.webp?v=3',
+      angry: 'img/personaje/aray_head_angry.webp?v=2',
+      sleep: 'img/personaje/aray_head_sleep.webp?v=2',
     }
   },
   
   // 👩 Mamá
   mama: {
-    base: 'assets/img/personaje_mama/mama_base.png',
-    comida: 'assets/img/personaje_mama/mama_comida.png',
-    abrigo: 'assets/img/personaje_mama/mama_abrigo.png',
-    tareas: 'assets/img/personaje_mama/mama_tareas.png',
-    bocata: 'assets/img/personaje_mama/mama_bocata.png',
-    enfadada: 'assets/img/personaje_mama/mama_enfadada.png',
+    base: 'assets/img/personaje_mama/mama_base.webp',
+    comida: 'assets/img/personaje_mama/mama_comida.webp',
+    abrigo: 'assets/img/personaje_mama/mama_abrigo.webp',
+    tareas: 'assets/img/personaje_mama/mama_tareas.webp',
+    bocata: 'assets/img/personaje_mama/mama_bocata.webp',
+    enfadada: 'assets/img/personaje_mama/mama_enfadada.webp',
   }
 };
 

@@ -14,10 +14,10 @@ let animationId;
 
 // Cargar imágenes
 const arayImage = new Image();
-arayImage.src = 'img/personaje/aray_base.png';
+arayImage.src = 'img/personaje/aray_base.webp';
 
 const roomImage = new Image();
-roomImage.src = 'img/fondos/edificio.png';
+roomImage.src = 'img/fondos/edificio.webp';
 
 // Estado del juego
 const state = {

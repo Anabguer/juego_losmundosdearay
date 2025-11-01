@@ -42,26 +42,26 @@ const state = {
 
 // Personajes (usar imágenes si existen, sino emojis)
 const AMIGOS_IMGS = [
-  'img/amigos/amigos1.png',
-  'img/amigos/amigos2.png',
-  'img/amigos/amigos3.png',
-  'img/amigos/amigos4.png',
-  'img/amigos/amigos5.png',
-  'img/amigos/amigos6.png',
-  'img/amigos/amigos7.png', // ARAY - aparece más
-  'img/amigos/amigos7.png', // Duplicado para más probabilidad
-  'img/amigos/amigos7.png', // Duplicado para más probabilidad
-  'img/amigos/amigos7.png'  // Duplicado para más probabilidad (40% de probabilidad)
+  'img/amigos/amigos1.webp',
+  'img/amigos/amigos2.webp',
+  'img/amigos/amigos3.webp',
+  'img/amigos/amigos4.webp',
+  'img/amigos/amigos5.webp',
+  'img/amigos/amigos6.webp',
+  'img/amigos/amigos7.webp', // ARAY - aparece más
+  'img/amigos/amigos7.webp', // Duplicado para más probabilidad
+  'img/amigos/amigos7.webp', // Duplicado para más probabilidad
+  'img/amigos/amigos7.webp'  // Duplicado para más probabilidad (40% de probabilidad)
 ];
 
 const DEMONIOS = ['👹', '😈', '👺', '💀', '👻'];
 
 // Demonios como imágenes
 const DEMONIOS_IMGS = [
-  'img/enemigos/zombie1.png',
-  'img/enemigos/zombie2.png',
-  'img/enemigos/zombie3.png',
-  'img/enemigos/zombie4.png'
+  'img/enemigos/zombie1.webp',
+  'img/enemigos/zombie2.webp',
+  'img/enemigos/zombie3.webp',
+  'img/enemigos/zombie4.webp'
 ];
 
 // Precargar imágenes de amigos

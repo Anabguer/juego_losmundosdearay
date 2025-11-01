@@ -987,15 +987,15 @@ const loadGameModule = async (gameType) => {
 
 const getBuildingInfo = (type) => {
   switch(type){
-    case 3: return { type:'school', name:'Cole', icon:'🏫', description:'¡Salva a tus amigos de los demonios!', image:'img/juegos/colegio.png?v=1', recordKey:'cole', recordType:'nivel' };
-    case 4: return { type:'skate', name:'Skate Park', icon:'🛹', description:'¡Corre y salta con tu skate!', image:'img/juegos/skate.png?v=1', recordKey:'skate', recordType:'nivel' };
-    case 5: return { type:'gym',  name:'Pabellón', icon:'🏀', description:'¡Tiros a canasta!', image:'img/juegos/pabellon.png?v=1', recordKey:'pabellon', recordType:'nivel' };
-    case 6: return { type:'yayos', name:'Casa Yayos', icon:'👴👵', description:'¡Dispara a las ratas!', image:'img/juegos/casayayos.png?v=1', recordKey:'yayos', recordType:'nivel' };
-    case 7: return { type:'informatica', name:'Informática', icon:'💻', description:'¡Conecta los cables!', image:'img/juegos/informatica.png?v=1', recordKey:'informatica', recordType:'nivel' };
-    case 8: return { type:'edificio', name:'Edificio', icon:'🏢', description:'¡Escala lo más alto!', image:'img/juegos/edificio.png?v=1', recordKey:'edificio', recordType:'m' };
-    case 13: return { type:'park', name:'Parque', icon:'🎮', description:'¡Come las chuches y escapa de los demonios!', image:'img/juegos/parque.png?v=1', recordKey:'parque', recordType:'nivel' };
-    case 14: return { type:'tienda', name:'Tienda de Chuches', icon:'🍬', description:'¡Conecta 3 chuches del mismo color!', image:'img/juegos/tienda.png?v=1', recordKey:'tienda', recordType:'nivel' };
-    case 15: return { type:'rio', name:'Río', icon:'🌊', description:'¡Salta por las piedras sin caer al agua!', image:'img/juegos/rio.png?v=1', recordKey:'rio', recordType:'nivel' };
+    case 3: return { type:'school', name:'Cole', icon:'🏫', description:'¡Salva a tus amigos de los demonios!', image:'img/juegos/colegio.webp?v=1', recordKey:'cole', recordType:'nivel' };
+    case 4: return { type:'skate', name:'Skate Park', icon:'🛹', description:'¡Corre y salta con tu skate!', image:'img/juegos/skate.webp?v=1', recordKey:'skate', recordType:'nivel' };
+    case 5: return { type:'gym',  name:'Pabellón', icon:'🏀', description:'¡Tiros a canasta!', image:'img/juegos/pabellon.webp?v=1', recordKey:'pabellon', recordType:'nivel' };
+    case 6: return { type:'yayos', name:'Casa Yayos', icon:'👴👵', description:'¡Dispara a las ratas!', image:'img/juegos/casayayos.webp?v=1', recordKey:'yayos', recordType:'nivel' };
+    case 7: return { type:'informatica', name:'Informática', icon:'💻', description:'¡Conecta los cables!', image:'img/juegos/informatica.webp?v=1', recordKey:'informatica', recordType:'nivel' };
+    case 8: return { type:'edificio', name:'Edificio', icon:'🏢', description:'¡Escala lo más alto!', image:'img/juegos/edificio.webp?v=1', recordKey:'edificio', recordType:'m' };
+    case 13: return { type:'park', name:'Parque', icon:'🎮', description:'¡Come las chuches y escapa de los demonios!', image:'img/juegos/parque.webp?v=1', recordKey:'parque', recordType:'nivel' };
+    case 14: return { type:'tienda', name:'Tienda de Chuches', icon:'🍬', description:'¡Conecta 3 chuches del mismo color!', image:'img/juegos/tienda.webp?v=1', recordKey:'tienda', recordType:'nivel' };
+    case 15: return { type:'rio', name:'Río', icon:'🌊', description:'¡Salta por las piedras sin caer al agua!', image:'img/juegos/rio.webp?v=1', recordKey:'rio', recordType:'nivel' };
     default: return { type:'unknown', name:'Lugar', icon:'🏠', description:'Un lugar del pueblo.', image:'img/casa.svg', recordKey:'', recordType:'' };
   }
 };
@@ -1477,15 +1477,15 @@ window.showGameRankingModal = async (gameType, gameName) => {
 // Función auxiliar para obtener información del edificio por tipo
 const getBuildingInfoByType = (type) => {
   switch(type){
-    case 'school': return { type:'school', name:'Cole', icon:'🏫', description:'¡Salva a tus amigos de los demonios!', image:'img/juegos/colegio.png?v=1', recordKey:'cole', recordType:'nivel' };
-    case 'skate': return { type:'skate', name:'Skate Park', icon:'🛹', description:'¡Corre y salta con tu skate!', image:'img/juegos/skate.png?v=1', recordKey:'skate', recordType:'nivel' };
-    case 'gym': return { type:'gym',  name:'Pabellón', icon:'🏀', description:'¡Tiros a canasta!', image:'img/juegos/pabellon.png?v=1', recordKey:'pabellon', recordType:'nivel' };
-    case 'yayos': return { type:'yayos', name:'Casa Yayos', icon:'👴👵', description:'¡Dispara a las ratas!', image:'img/juegos/casayayos.png?v=1', recordKey:'yayos', recordType:'nivel' };
-    case 'informatica': return { type:'informatica', name:'Informática', icon:'💻', description:'¡Conecta los cables!', image:'img/juegos/informatica.png?v=1', recordKey:'informatica', recordType:'nivel' };
-    case 'edificio': return { type:'edificio', name:'Edificio', icon:'🏢', description:'¡Escala lo más alto!', image:'img/juegos/edificio.png?v=1', recordKey:'edificio', recordType:'m' };
-    case 'park': return { type:'park', name:'Parque', icon:'🎮', description:'¡Come las chuches y escapa de los demonios!', image:'img/juegos/parque.png?v=1', recordKey:'parque', recordType:'nivel' };
-    case 'tienda': return { type:'tienda', name:'Tienda', icon:'🛒', description:'¡Combina las frutas!', image:'img/juegos/tienda.png?v=1', recordKey:'tienda', recordType:'nivel' };
-    case 'rio': return { type:'rio', name:'Río', icon:'🌊', description:'¡Salta los troncos!', image:'img/juegos/rio.png?v=1', recordKey:'rio', recordType:'nivel' };
+    case 'school': return { type:'school', name:'Cole', icon:'🏫', description:'¡Salva a tus amigos de los demonios!', image:'img/juegos/colegio.webp?v=1', recordKey:'cole', recordType:'nivel' };
+    case 'skate': return { type:'skate', name:'Skate Park', icon:'🛹', description:'¡Corre y salta con tu skate!', image:'img/juegos/skate.webp?v=1', recordKey:'skate', recordType:'nivel' };
+    case 'gym': return { type:'gym',  name:'Pabellón', icon:'🏀', description:'¡Tiros a canasta!', image:'img/juegos/pabellon.webp?v=1', recordKey:'pabellon', recordType:'nivel' };
+    case 'yayos': return { type:'yayos', name:'Casa Yayos', icon:'👴👵', description:'¡Dispara a las ratas!', image:'img/juegos/casayayos.webp?v=1', recordKey:'yayos', recordType:'nivel' };
+    case 'informatica': return { type:'informatica', name:'Informática', icon:'💻', description:'¡Conecta los cables!', image:'img/juegos/informatica.webp?v=1', recordKey:'informatica', recordType:'nivel' };
+    case 'edificio': return { type:'edificio', name:'Edificio', icon:'🏢', description:'¡Escala lo más alto!', image:'img/juegos/edificio.webp?v=1', recordKey:'edificio', recordType:'m' };
+    case 'park': return { type:'park', name:'Parque', icon:'🎮', description:'¡Come las chuches y escapa de los demonios!', image:'img/juegos/parque.webp?v=1', recordKey:'parque', recordType:'nivel' };
+    case 'tienda': return { type:'tienda', name:'Tienda', icon:'🛒', description:'¡Combina las frutas!', image:'img/juegos/tienda.webp?v=1', recordKey:'tienda', recordType:'nivel' };
+    case 'rio': return { type:'rio', name:'Río', icon:'🌊', description:'¡Salta los troncos!', image:'img/juegos/rio.webp?v=1', recordKey:'rio', recordType:'nivel' };
     default: return { type:'unknown', name:'Lugar', icon:'🏠', description:'Un lugar del pueblo.', image:'img/casa.svg', recordKey:'', recordType:'' };
   }
 };

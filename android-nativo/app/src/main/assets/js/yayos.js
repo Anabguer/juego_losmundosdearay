@@ -18,16 +18,16 @@ const RAT_COUNT = 4;
 const loadRatImages = () => {
   for (let i = 1; i <= RAT_COUNT; i++) {
     const img = new Image();
-    img.src = `img/enemigos/rata${i}.png`;
+    img.src = `img/enemigos/rata${i}.webp`;
     ratImages.push(img);
   }
   
   // Cargar imágenes de Aray para rotación (solo las 4 caras principales)
   const arayImagePaths = [
-    'img/personaje/aray_head_happy2.png',
-    'img/personaje/aray_head_neutral.png',
-    'img/personaje/aray_head_angry.png',
-    'img/personaje/aray_head_sleep.png'
+    'img/personaje/aray_head_happy2.webp',
+    'img/personaje/aray_head_neutral.webp',
+    'img/personaje/aray_head_angry.webp',
+    'img/personaje/aray_head_sleep.webp'
   ];
   
   arayImagePaths.forEach(path => {
@@ -766,7 +766,7 @@ const createGameInterface = () => {
     left: 0;
     right: 0;
     bottom: 0;
-    background-image: url('img/fondos/casayayos.png');
+    background-image: url('img/fondos/casayayos.webp');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;

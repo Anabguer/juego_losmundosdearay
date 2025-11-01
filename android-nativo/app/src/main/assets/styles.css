@@ -58,14 +58,14 @@ body {
 
 /* Fondos personalizados por juego */
 body.game-cole {
-  background-image: url('img/fondos/colegio.png');
+  background-image: url('img/fondos/colegio.webp');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
 }
 
 body.game-parque {
-  background-image: url('img/fondos/parque.png');
+  background-image: url('img/fondos/parque.webp');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
@@ -73,35 +73,35 @@ body.game-parque {
 
 body.game-skate {
   /* Fondo personalizado con las decoraciones del canvas encima */
-  background-image: url('img/fondos/skate2.png');
+  background-image: url('img/fondos/skate2.webp');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
 }
 
 body.game-pabellon {
-  background-image: url('img/fondos/pabellon.png');
+  background-image: url('img/fondos/pabellon.webp');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
 }
 
 body.game-yayos {
-  background-image: url('img/fondos/casayayos.png');
+  background-image: url('img/fondos/casayayos.webp');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
 }
 
 body.game-edificio {
-  background-image: url('img/fondos/edificio.png');
+  background-image: url('img/fondos/edificio.webp');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
 }
 
 body.game-informatica {
-  background-image: url('img/fondos/informaticca.png');
+  background-image: url('img/fondos/informaticca.webp');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
@@ -725,31 +725,31 @@ button#modal-x.btn.btn-outline {
 
 /* Texturas de césped aleatorias */
 .tile.grass-1 {
-  background-image: url('img/texturas/cesped1.png');
+  background-image: url('img/texturas/cesped1.webp');
   background-size: cover;
   background-position: center;
 }
 
 .tile.grass-2 {
-  background-image: url('img/texturas/cesped2.png');
+  background-image: url('img/texturas/cesped2.webp');
   background-size: cover;
   background-position: center;
 }
 
 .tile.grass-3 {
-  background-image: url('img/texturas/cesped3.png');
+  background-image: url('img/texturas/cesped3.webp');
   background-size: cover;
   background-position: center;
 }
 
 .tile.grass-4 {
-  background-image: url('img/texturas/cesped4.png');
+  background-image: url('img/texturas/cesped4.webp');
   background-size: cover;
   background-position: center;
 }
 
 .tile.dirt {
-  background-image: url('img/texturas/tierra.png');
+  background-image: url('img/texturas/tierra.webp');
   background-size: cover;
   background-position: center;
   border-radius: 0;
@@ -808,7 +808,7 @@ button#modal-x.btn.btn-outline {
 }
 
 .tile.river {
-  background-image: url('img/texturas/rio.png');
+  background-image: url('img/texturas/rio.webp');
   background-size: cover;
   background-position: center;
   animation: river-flow 4s linear infinite;
@@ -845,7 +845,7 @@ button#modal-x.btn.btn-outline {
 
 /* Calle base */
 .tile.road {
-  background-image: url('img/texturas/calle.png');
+  background-image: url('img/texturas/calle.webp');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -864,7 +864,7 @@ button#modal-x.btn.btn-outline {
 
 /* Casilla de inicio - igual que carretera normal */
 .tile.start {
-  background-image: url('img/texturas/calle.png');
+  background-image: url('img/texturas/calle.webp');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -919,56 +919,56 @@ button#modal-x.btn.btn-outline {
 
 /* Partes del edificio de la casilla central */
 .tile.building-part.casilla-central {
-  background-image: url('img/juegos/Casilla_central.png');
+  background-image: url('img/juegos/Casilla_central.webp');
 }
 
 .tile.school {
-  background-image: url('img/juegos/colegio.png');
+  background-image: url('img/juegos/colegio.webp');
   border: none;
 }
 
 .tile.skate {
-  background-image: url('img/juegos/skate.png');
+  background-image: url('img/juegos/skate.webp');
   border: none;
 }
 
 .tile.gym {
-  background-image: url('img/juegos/pabellon.png');
+  background-image: url('img/juegos/pabellon.webp');
   border: none;
 }
 
 .tile.yayos {
-  background-image: url('img/juegos/casayayos.png');
+  background-image: url('img/juegos/casayayos.webp');
   border: none;
 }
 
 .tile.informatica {
-  background-image: url('img/juegos/informatica.png');
+  background-image: url('img/juegos/informatica.webp');
   border: none;
 }
 
 .tile.edificio {
-  background-image: url('img/juegos/edificio.png');
+  background-image: url('img/juegos/edificio.webp');
   border: none;
 }
 
 .tile.park {
-  background-image: url('img/juegos/parque.png');
+  background-image: url('img/juegos/parque.webp');
   border: none;
 }
 
 .tile.tienda {
-  background-image: url('img/juegos/tienda.png');
+  background-image: url('img/juegos/tienda.webp');
   border: none;
 }
 
 .tile.rio {
-  background-image: url('img/juegos/rio.png');
+  background-image: url('img/juegos/rio.webp');
   border: none;
 }
 
 .tile.casilla-central {
-  background-image: url('img/juegos/Casilla_central.png');
+  background-image: url('img/juegos/Casilla_central.webp');
   background-size: 200% 200%;
   background-position: top left;
   background-repeat: no-repeat;

@@ -14,17 +14,17 @@ const runSprites = [
   new Image()
 ];
 // Solo usar run1 para ambos (más estable)
-runSprites[0].src = 'img/personaje/aray_run1.png?v=2';
-runSprites[1].src = 'img/personaje/aray_run1.png?v=2';
+runSprites[0].src = 'img/personaje/aray_run1.webp?v=2';
+runSprites[1].src = 'img/personaje/aray_run1.webp?v=2';
 
 // Sprites de mamá (obstáculos) - SIN mama_base
 const mamaNames = ['enfadada', 'bocata', 'comida', 'abrigo', 'tareas'];
 const mamaSprites = [];
 mamaNames.forEach(name => {
   const img = new Image();
-  img.src = `img/personaje_mama/mama_${name}.png`;
-  img.onerror = () => console.warn(`⚠️ No se pudo cargar: mama_${name}.png`);
-  img.onload = () => console.log(`✅ Cargada: mama_${name}.png`);
+  img.src = `img/personaje_mama/mama_${name}.webp`;
+  img.onerror = () => console.warn(`⚠️ No se pudo cargar: mama_${name}.webp`);
+  img.onload = () => console.log(`✅ Cargada: mama_${name}.webp`);
   mamaSprites.push(img);
 });
 

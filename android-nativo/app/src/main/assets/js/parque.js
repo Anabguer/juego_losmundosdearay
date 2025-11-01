@@ -14,7 +14,7 @@ let animationId;
 
 // Cargar imagen de Aray
 const arayImage = new Image();
-arayImage.src = 'img/personaje/aray_head_happy2.png';
+arayImage.src = 'img/personaje/aray_head_happy2.webp';
 
 // Tipos de dulces (igual que en tienda)
 const CANDY_TYPES = ['🍭', '🍬', '🍫', '🍩', '🍪', '🧁', '🍰', '🎂'];

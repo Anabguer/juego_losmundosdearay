@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Diagnóstico localStorage vs Firebase</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .localStorage { background: #e8f5e8; }
+        .firebase { background: #e8f0ff; }
+        .comparison { background: #fff3cd; }
+        .error { background: #f8d7da; color: #721c24; }
+        .success { background: #d4edda; color: #155724; }
+        .warning { background: #fff3cd; color: #856404; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .refresh { background: #28a745; }
+        .refresh:hover { background: #1e7e34; }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Diagnóstico localStorage vs Firebase</h1>
+        <p>Esta página te ayudará a verificar la sincronización entre localStorage y Firebase.</p>
+        
+        <div class="section">
+            <h2>🎮 Controles</h2>
+            <button onclick="refreshData()" class="refresh">🔄 Actualizar Datos</button>
+            <button onclick="migrateLegacyData()" style="background: #ffc107; color: #000;">🔄 Migrar Datos Legacy</button>
+            <button onclick="testFirebaseConnection()">🔥 Probar Firebase</button>
+            <button onclick="syncWithFirebase()">🔄 Sincronizar con Firebase</button>
+            <button onclick="clearLocalStorage()">🗑️ Limpiar localStorage</button>
+        </div>
+
+        <div class="section localStorage">
+            <h2>💾 localStorage</h2>
+            <div id="localStorageData">
+                <p>Cargando datos de localStorage...</p>
+            </div>
+        </div>
+
+        <div class="section firebase">
+            <h2>🔥 Firebase (via GameBridge)</h2>
+            <div id="firebaseData">
+                <p>Cargando datos de Firebase...</p>
+            </div>
+        </div>
+
+        <div class="section comparison">
+            <h2>⚖️ Comparación y Estado</h2>
+            <div id="comparisonData">
+                <p>Analizando diferencias...</p>
+            </div>
+        </div>
+
+        <div class="section" style="background: #e8f4fd;">
+            <h2>🏗️ Estructura Unificada Propuesta</h2>
+            <div style="font-family: monospace; font-size: 0.9rem;">
+                <h3>📱 localStorage (Estructura Unificada):</h3>
+                <pre style="background: #f8f9fa; padding: 10px; border-radius: 5px;">
+losmundosdearay_user_data: {
+  uid: "string",
+  nick: "string", 
+  email: "string",
+  photoURL: "string",
+  createdAt: "timestamp",
+  lastSeen: "timestamp"
+}
+
+losmundosdearay_settings: {
+  audioEnabled: boolean,
+  musicEnabled: boolean,
+  lastGameId: "string",
+  language: "es"
+}
+
+losmundosdearay_resources: {
+  candiesTotal: number,
+  energy: number,
+  coins: number
+}
+
+losmundosdearay_progress: {
+  skate: { bestLevel: number, bestScore: number, lastPlayed: timestamp },
+  cole: { bestLevel: number, bestScore: number, lastPlayed: timestamp },
+  yayos: { bestLevel: number, bestScore: number, lastPlayed: timestamp },
+  parque: { bestLevel: number, bestScore: number, lastPlayed: timestamp },
+  pabellon: { bestLevel: number, bestScore: number, lastPlayed: timestamp },
+  informatica: { bestLevel: number, bestScore: number, lastPlayed: timestamp },
+  tienda: { bestLevel: number, bestScore: number, lastPlayed: timestamp },
+  rio: { bestLevel: number, bestScore: number, lastPlayed: timestamp },
+  edificio: { bestLevel: number, bestScore: number, lastPlayed: timestamp }
+}
+
+losmundosdearay_sync: {
+  lastSync: "timestamp",
+  offlineQueue: [],
+  needsSync: boolean,
+  version: number
+}
+                </pre>
+                
+                <h3>🔥 Firebase (Estructura Compatible):</h3>
+                <pre style="background: #f8f9fa; padding: 10px; border-radius: 5px;">
+apps/{appId}/users/{uid}: {
+  uid: "string",
+  nick: "string",
+  email: "string", 
+  photoURL: "string",
+  candiesTotal: number,
+  createdAt: timestamp,
+  lastSeen: timestamp,
+  settings: { lastGameId: "string" }
+}
+
+apps/{appId}/users/{uid}/progress/{gameId}: {
+  bestLevel: number,
+  bestScore: number,
+  lastPlayed: timestamp,
+  updatedAt: timestamp
+}
+                </pre>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Logs en Tiempo Real</h2>
+            <div id="logs" style="max-height: 300px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 5px;">
+                <p>Los logs aparecerán aquí...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========================================
+        // 🏗️ ESTRUCTURA UNIFICADA DE DATOS
+        // ========================================
+        
+        // Estructura unificada para localStorage y Firebase
+        const UNIFIED_DATA_STRUCTURE = {
+            // Información del usuario
+            user: {
+                uid: null,
+                nick: null,
+                email: null,
+                photoURL: null,
+                createdAt: null,
+                lastSeen: null
+            },
+            
+            // Configuraciones globales
+            settings: {
+                audioEnabled: true,
+                musicEnabled: true,
+                lastGameId: null,
+                language: 'es'
+            },
+            
+            // Recursos del juego
+            resources: {
+                candiesTotal: 0,
+                energy: 100,
+                coins: 0
+            },
+            
+            // Progreso por juego
+            progress: {
+                skate: { bestLevel: 1, bestScore: 0, lastPlayed: null },
+                cole: { bestLevel: 1, bestScore: 0, lastPlayed: null },
+                yayos: { bestLevel: 1, bestScore: 0, lastPlayed: null },
+                parque: { bestLevel: 1, bestScore: 0, lastPlayed: null },
+                pabellon: { bestLevel: 1, bestScore: 0, lastPlayed: null },
+                informatica: { bestLevel: 1, bestScore: 0, lastPlayed: null },
+                tienda: { bestLevel: 1, bestScore: 0, lastPlayed: null },
+                rio: { bestLevel: 1, bestScore: 0, lastPlayed: null },
+                edificio: { bestLevel: 1, bestScore: 0, lastPlayed: null }
+            },
+            
+            // Metadatos de sincronización
+            sync: {
+                lastSync: null,
+                offlineQueue: [],
+                needsSync: false,
+                version: 1
+            }
+        };
+
+        // Claves de localStorage unificadas
+        const STORAGE_KEYS = {
+            USER_DATA: 'losmundosdearay_user_data',
+            SETTINGS: 'losmundosdearay_settings', 
+            RESOURCES: 'losmundosdearay_resources',
+            PROGRESS: 'losmundosdearay_progress',
+            SYNC: 'losmundosdearay_sync',
+            
+            // Claves legacy para migración
+            LEGACY_KEYS: [
+                'aray_best_skate', 'aray_best_level_skate',
+                'aray_best_cole', 'aray_best_level_cole', 
+                'aray_best_yayos', 'aray_best_level_yayos',
+                'aray_fresitas', 'aray_energy',
+                'audioEnabled', 'musicEnabled', 'user_nick'
+            ]
+        };
+
+        // Función para añadir logs
+        function addLog(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `status ${type}`;
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        // ========================================
+        // 🔧 FUNCIONES DE GESTIÓN DE DATOS UNIFICADOS
+        // ========================================
+        
+        // Función para obtener datos unificados de localStorage
+        function getUnifiedLocalStorageData() {
+            const data = { ...UNIFIED_DATA_STRUCTURE };
+            
+            try {
+                // Cargar datos estructurados
+                const userData = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+                if (userData) data.user = { ...data.user, ...JSON.parse(userData) };
+                
+                const settings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+                if (settings) data.settings = { ...data.settings, ...JSON.parse(settings) };
+                
+                const resources = localStorage.getItem(STORAGE_KEYS.RESOURCES);
+                if (resources) data.resources = { ...data.resources, ...JSON.parse(resources) };
+                
+                const progress = localStorage.getItem(STORAGE_KEYS.PROGRESS);
+                if (progress) data.progress = { ...data.progress, ...JSON.parse(progress) };
+                
+                const sync = localStorage.getItem(STORAGE_KEYS.SYNC);
+                if (sync) data.sync = { ...data.sync, ...JSON.parse(sync) };
+                
+            } catch (error) {
+                addLog(`❌ Error cargando datos unificados: ${error.message}`, 'error');
+            }
+            
+            return data;
+        }
+        
+        // Función para guardar datos unificados en localStorage
+        function saveUnifiedLocalStorageData(data) {
+            try {
+                localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(data.user));
+                localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(data.settings));
+                localStorage.setItem(STORAGE_KEYS.RESOURCES, JSON.stringify(data.resources));
+                localStorage.setItem(STORAGE_KEYS.PROGRESS, JSON.stringify(data.progress));
+                localStorage.setItem(STORAGE_KEYS.SYNC, JSON.stringify(data.sync));
+                
+                addLog('✅ Datos unificados guardados en localStorage', 'success');
+                return true;
+            } catch (error) {
+                addLog(`❌ Error guardando datos unificados: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        // Función para migrar datos legacy a estructura unificada
+        function migrateLegacyData() {
+            addLog('🔄 Iniciando migración de datos legacy...', 'info');
+            
+            const unifiedData = getUnifiedLocalStorageData();
+            let migrated = false;
+            
+            // Migrar datos legacy
+            STORAGE_KEYS.LEGACY_KEYS.forEach(key => {
+                const value = localStorage.getItem(key);
+                if (value !== null) {
+                    switch (key) {
+                        case 'aray_best_skate':
+                        case 'aray_best_level_skate':
+                            unifiedData.progress.skate.bestLevel = Math.max(unifiedData.progress.skate.bestLevel, parseInt(value) || 1);
+                            break;
+                        case 'aray_best_cole':
+                        case 'aray_best_level_cole':
+                            unifiedData.progress.cole.bestLevel = Math.max(unifiedData.progress.cole.bestLevel, parseInt(value) || 1);
+                            break;
+                        case 'aray_best_yayos':
+                        case 'aray_best_level_yayos':
+                            unifiedData.progress.yayos.bestLevel = Math.max(unifiedData.progress.yayos.bestLevel, parseInt(value) || 1);
+                            break;
+                        case 'aray_fresitas':
+                            unifiedData.resources.coins = parseInt(value) || 0;
+                            break;
+                        case 'aray_energy':
+                            unifiedData.resources.energy = parseInt(value) || 100;
+                            break;
+                        case 'audioEnabled':
+                            unifiedData.settings.audioEnabled = value === 'true';
+                            break;
+                        case 'musicEnabled':
+                            unifiedData.settings.musicEnabled = value === 'true';
+                            break;
+                        case 'user_nick':
+                            unifiedData.user.nick = value;
+                            break;
+                    }
+                    migrated = true;
+                }
+            });
+            
+            if (migrated) {
+                unifiedData.sync.version = 1;
+                unifiedData.sync.lastSync = new Date().toISOString();
+                saveUnifiedLocalStorageData(unifiedData);
+                addLog('✅ Migración completada', 'success');
+                
+                // Limpiar datos legacy después de migración exitosa
+                if (confirm('¿Limpiar datos legacy después de la migración?')) {
+                    STORAGE_KEYS.LEGACY_KEYS.forEach(key => localStorage.removeItem(key));
+                    addLog('🗑️ Datos legacy limpiados', 'warning');
+                }
+            } else {
+                addLog('ℹ️ No hay datos legacy para migrar', 'info');
+            }
+            
+            return unifiedData;
+        }
+        
+        // Función para obtener datos de localStorage (legacy - para comparación)
+        function getLocalStorageData() {
+            const data = {};
+            const keys = [
+                'aray_best_level_skate',
+                'aray_best_skate',
+                'audioEnabled',
+                'musicEnabled',
+                'aray_best_level_cole',
+                'aray_best_cole',
+                'aray_best_level_yayos',
+                'aray_best_yayos'
+            ];
+            
+            keys.forEach(key => {
+                const value = localStorage.getItem(key);
+                if (value !== null) {
+                    data[key] = value;
+                }
+            });
+            
+            return data;
+        }
+
+        // Función para obtener datos de Firebase
+        async function getFirebaseData() {
+            const data = {};
+            
+            if (window.GameBridge && window.GameBridge.getCandies) {
+                try {
+                    const candiesData = window.GameBridge.getCandies();
+                    const parsed = JSON.parse(candiesData);
+                    data.candiesData = parsed;
+                    addLog('✅ Datos de candies obtenidos de Firebase', 'success');
+                } catch (error) {
+                    addLog(`❌ Error obteniendo candies: ${error.message}`, 'error');
+                }
+            } else {
+                addLog('❌ GameBridge no disponible', 'error');
+            }
+
+            // Obtener niveles de juegos
+            const gameKeys = ['skate', 'cole', 'yayos', 'pabellon', 'informatica', 'tienda', 'rio', 'edificio'];
+            
+            for (const gameKey of gameKeys) {
+                if (window.GameBridge && window.GameBridge.getBestLevel) {
+                    try {
+                        const level = await new Promise((resolve) => {
+                            window.onBestLevelReceived = (level) => {
+                                addLog(`📥 Nivel recibido para ${gameKey}: ${level}`, 'info');
+                                resolve(parseInt(level) || 0);
+                            };
+                            window.GameBridge.getBestLevel(gameKey);
+                            setTimeout(() => resolve(0), 2000);
+                        });
+                        data[`${gameKey}_level`] = level;
+                    } catch (error) {
+                        addLog(`❌ Error obteniendo nivel de ${gameKey}: ${error.message}`, 'error');
+                    }
+                }
+            }
+            
+            return data;
+        }
+
+        // Función para mostrar datos de localStorage (legacy y unificados)
+        function displayLocalStorageData() {
+            const legacyData = getLocalStorageData();
+            const unifiedData = getUnifiedLocalStorageData();
+            const div = document.getElementById('localStorageData');
+            
+            let html = '<h3>📊 Datos en localStorage:</h3>';
+            
+            // Mostrar datos legacy
+            if (Object.keys(legacyData).length > 0) {
+                html += '<div class="warning"><h4>⚠️ Datos Legacy (Dispersos):</h4><pre>';
+                Object.entries(legacyData).forEach(([key, value]) => {
+                    html += `${key}: ${value}\n`;
+                });
+                html += '</pre></div>';
+            }
+            
+            // Mostrar datos unificados
+            html += '<div class="success"><h4>✅ Estructura Unificada:</h4>';
+            
+            // Usuario
+            if (unifiedData.user.nick || unifiedData.user.uid) {
+                html += '<h5>👤 Usuario:</h5><pre>';
+                Object.entries(unifiedData.user).forEach(([key, value]) => {
+                    if (value !== null) html += `${key}: ${value}\n`;
+                });
+                html += '</pre>';
+            }
+            
+            // Configuraciones
+            html += '<h5>⚙️ Configuraciones:</h5><pre>';
+            Object.entries(unifiedData.settings).forEach(([key, value]) => {
+                html += `${key}: ${value}\n`;
+            });
+            html += '</pre>';
+            
+            // Recursos
+            html += '<h5>💰 Recursos:</h5><pre>';
+            Object.entries(unifiedData.resources).forEach(([key, value]) => {
+                html += `${key}: ${value}\n`;
+            });
+            html += '</pre>';
+            
+            // Progreso de juegos
+            html += '<h5>🎮 Progreso de Juegos:</h5><pre>';
+            Object.entries(unifiedData.progress).forEach(([gameId, progress]) => {
+                if (progress.bestLevel > 1 || progress.bestScore > 0) {
+                    html += `${gameId}: nivel ${progress.bestLevel}, puntos ${progress.bestScore}\n`;
+                }
+            });
+            html += '</pre>';
+            
+            // Sincronización
+            html += '<h5>🔄 Sincronización:</h5><pre>';
+            Object.entries(unifiedData.sync).forEach(([key, value]) => {
+                html += `${key}: ${value}\n`;
+            });
+            html += '</pre></div>';
+            
+            div.innerHTML = html;
+            
+            const totalElements = Object.keys(legacyData).length + 
+                                 (unifiedData.user.nick ? 1 : 0) + 
+                                 Object.keys(unifiedData.settings).length +
+                                 Object.keys(unifiedData.resources).length +
+                                 Object.keys(unifiedData.progress).length;
+            
+            addLog(`💾 localStorage: ${totalElements} elementos (legacy + unificados)`, 'info');
+        }
+
+        // Función para mostrar datos de Firebase
+        async function displayFirebaseData() {
+            const data = await getFirebaseData();
+            const div = document.getElementById('firebaseData');
+            
+            if (Object.keys(data).length === 0) {
+                div.innerHTML = '<p class="warning">⚠️ No se pudieron obtener datos de Firebase</p>';
+            } else {
+                let html = '<h3>Datos obtenidos:</h3><pre>';
+                Object.entries(data).forEach(([key, value]) => {
+                    html += `${key}: ${JSON.stringify(value)}\n`;
+                });
+                html += '</pre>';
+                div.innerHTML = html;
+            }
+            
+            addLog(`🔥 Firebase: ${Object.keys(data).length} elementos`, 'info');
+        }
+
+        // Función para comparar datos (legacy vs unificados vs Firebase)
+        function compareData() {
+            const legacyData = getLocalStorageData();
+            const unifiedData = getUnifiedLocalStorageData();
+            const div = document.getElementById('comparisonData');
+            let html = '<h3>📊 Análisis de Estructura de Datos:</h3>';
+            
+            // Análisis de problemas
+            let issues = [];
+            let recommendations = [];
+            
+            // Verificar si hay datos legacy
+            if (Object.keys(legacyData).length > 0) {
+                issues.push('⚠️ Datos legacy dispersos encontrados');
+                recommendations.push('🔄 Recomendación: Ejecutar migración de datos legacy');
+            }
+            
+            // Verificar estructura unificada
+            if (!unifiedData.user.nick && !unifiedData.user.uid) {
+                issues.push('❌ No hay información de usuario en estructura unificada');
+                recommendations.push('👤 Recomendación: Configurar datos de usuario');
+            }
+            
+            // Verificar sincronización
+            if (unifiedData.sync.lastSync === null) {
+                issues.push('⚠️ No hay registro de última sincronización');
+                recommendations.push('🔄 Recomendación: Ejecutar sincronización inicial');
+            }
+            
+            // Verificar GameBridge
+            if (window.GameBridge) {
+                html += '<div class="success">✅ GameBridge disponible</div>';
+            } else {
+                issues.push('❌ GameBridge no disponible');
+                recommendations.push('🔧 Recomendación: Verificar configuración de GameBridge');
+            }
+            
+            // Mostrar problemas
+            if (issues.length > 0) {
+                html += '<div class="error"><h4>🚨 Problemas Encontrados:</h4><ul>';
+                issues.forEach(issue => html += `<li>${issue}</li>`);
+                html += '</ul></div>';
+            }
+            
+            // Mostrar recomendaciones
+            if (recommendations.length > 0) {
+                html += '<div class="warning"><h4>💡 Recomendaciones:</h4><ul>';
+                recommendations.forEach(rec => html += `<li>${rec}</li>`);
+                html += '</ul></div>';
+            }
+            
+            // Mostrar estado de la estructura
+            html += '<div class="success"><h4>✅ Estado de la Estructura:</h4>';
+            html += `<p><strong>Datos Legacy:</strong> ${Object.keys(legacyData).length} elementos</p>`;
+            html += `<p><strong>Estructura Unificada:</strong> ${unifiedData.user.nick ? 'Configurada' : 'No configurada'}</p>`;
+            html += `<p><strong>Última Sincronización:</strong> ${unifiedData.sync.lastSync || 'Nunca'}</p>`;
+            html += `<p><strong>Versión:</strong> ${unifiedData.sync.version}</p>`;
+            html += '</div>';
+            
+            div.innerHTML = html;
+        }
+
+        // Función principal para actualizar todos los datos
+        async function refreshData() {
+            addLog('🔄 Actualizando datos...', 'info');
+            displayLocalStorageData();
+            await displayFirebaseData();
+            compareData();
+            addLog('✅ Actualización completada', 'success');
+        }
+
+        // Función para limpiar localStorage
+        function clearLocalStorage() {
+            if (confirm('¿Estás seguro de que quieres limpiar localStorage?')) {
+                localStorage.clear();
+                addLog('🗑️ localStorage limpiado', 'warning');
+                refreshData();
+            }
+        }
+
+        // Función para probar conexión Firebase
+        function testFirebaseConnection() {
+            if (window.GameBridge && window.GameBridge.getCandies) {
+                try {
+                    const data = window.GameBridge.getCandies();
+                    addLog('✅ Conexión Firebase OK', 'success');
+                    addLog(`📊 Datos: ${data}`, 'info');
+                } catch (error) {
+                    addLog(`❌ Error Firebase: ${error.message}`, 'error');
+                }
+            } else {
+                addLog('❌ GameBridge no disponible', 'error');
+            }
+        }
+
+        // Función para sincronizar con Firebase (estructura unificada)
+        async function syncWithFirebase() {
+            addLog('🔄 Iniciando sincronización unificada...', 'info');
+            
+            if (window.GameBridge && window.GameBridge.getCandies) {
+                try {
+                    const candiesData = window.GameBridge.getCandies();
+                    const parsed = JSON.parse(candiesData);
+                    
+                    // Obtener datos unificados actuales
+                    const unifiedData = getUnifiedLocalStorageData();
+                    
+                    // Sincronizar configuraciones de audio
+                    if (parsed.soundEnabled !== undefined) {
+                        unifiedData.settings.audioEnabled = parsed.soundEnabled;
+                        addLog(`🔊 Audio sincronizado: ${parsed.soundEnabled}`, 'success');
+                    }
+                    
+                    if (parsed.musicEnabled !== undefined) {
+                        unifiedData.settings.musicEnabled = parsed.musicEnabled;
+                        addLog(`🎵 Música sincronizada: ${parsed.musicEnabled}`, 'success');
+                    }
+                    
+                    // Sincronizar recursos
+                    if (parsed.candiesTotal !== undefined) {
+                        unifiedData.resources.candiesTotal = parsed.candiesTotal;
+                        addLog(`🍭 Candies sincronizados: ${parsed.candiesTotal}`, 'success');
+                    }
+                    
+                    // Actualizar metadatos de sincronización
+                    unifiedData.sync.lastSync = new Date().toISOString();
+                    unifiedData.sync.needsSync = false;
+                    
+                    // Guardar datos unificados
+                    if (saveUnifiedLocalStorageData(unifiedData)) {
+                        addLog('✅ Sincronización unificada completada', 'success');
+                    } else {
+                        addLog('⚠️ Sincronización completada con errores', 'warning');
+                    }
+                    
+                    refreshData();
+                } catch (error) {
+                    addLog(`❌ Error en sincronización: ${error.message}`, 'error');
+                }
+            } else {
+                addLog('❌ GameBridge no disponible para sincronización', 'error');
+            }
+        }
+
+        // Inicializar cuando se carga la página
+        document.addEventListener('DOMContentLoaded', function() {
+            addLog('🚀 Página de diagnóstico cargada', 'success');
+            refreshData();
+        });
+    </script>
+</body>
+</html>
